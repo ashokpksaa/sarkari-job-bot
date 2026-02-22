@@ -8,88 +8,98 @@ from crewai_tools import ScrapeWebsiteTool
 today_date = datetime.datetime.now().strftime("%B %d, %Y")
 
 # 1. Page Config
-st.set_page_config(page_title="Sarkari Job Auto-Blogger Pro", page_icon="📝", layout="wide")
-st.title("📝 Sarkari Job Auto-Blogger (Human-Style Mode) 🚀")
+st.set_page_config(page_title="Sarkari Job Pro Auto-Blogger", page_icon="📝", layout="wide")
+st.title("🔥 Professional Sarkari Job Blogger v3.0 🚀")
 
 # 2. Configuration
 with st.sidebar:
-    st.header("⚙️ Settings")
+    st.header("⚙️ Configuration")
     api_key = st.secrets.get("GROQ_API_KEY", "")
     if not api_key:
         api_key = st.text_input("Enter Groq API Key:", type="password")
 
 if api_key:
     os.environ["OPENAI_API_KEY"] = api_key 
-    os.environ["OPENAI_BASE_URL"] = "https://api.groq.com/openai/v1"
+    os.environ["OPENAI_API_BASE"] = "https://api.groq.com/openai/v1"
     os.environ["OPENAI_MODEL_NAME"] = "llama-3.3-70b-versatile"
 
 # 3. Inputs
-job_topic = st.text_input("Job Topic:", value="RSSB Lab Assistant Recruitment 2026")
-default_urls = "https://www.resultbharat.com/RSSB-Lab-Assistant_Advt-05-2026.html, https://www.freejobalert.com/articles/rssb-lab-assistant-recruitment-2026-apply-online-for-804-posts-3035740"
-target_urls = st.text_area("Target Websites:", value=default_urls, height=80)
+job_topic = st.text_input("Enter Job Topic:", value="RSSB Lab Assistant Recruitment 2026")
+default_urls = "https://www.resultbharat.com/RSSB-Lab-Assistant_Advt-05-2026.html, https://www.freejobalert.com/articles/rssb-lab-assistant-recruitment-2026-apply-online-for-804-posts-3035740, https://www.adda247.com/exams/rajasthan/rssb-lab-assistant-recruitment-2026/"
+target_urls = st.text_area("Target URL Links (Comma separated):", value=default_urls, height=100)
 
 scrape_tool = ScrapeWebsiteTool()
 
-if st.button("🚀 Write Human-Style Blog"):
+# --- MAIN LOGIC ---
+if st.button("🚀 Generate Mega-Detailed Blog"):
     if not api_key:
-        st.error("❌ Please enter API Key!")
+        st.error("❌ API Key missing!")
     else:
-        with st.spinner('🤖 AI ' + 'is writing like a Pro Blogger...'):
+        with st.spinner('🤖 AI is researching from multiple sources and designing your blog...'):
             try:
                 llm = ChatOpenAI(
                     model_name="llama-3.3-70b-versatile",
-                    temperature=0.8, # Thoda creative tone ke liye
+                    temperature=0.5,
                     api_key=api_key
                 )
 
+                # Researcher: Data extract karne ke liye
                 researcher = Agent(
-                    role='Data Expert',
-                    goal='Extract real facts from the URLs.',
-                    backstory="You extract 100% accurate data. You are the foundation of this blog.",
+                    role='Expert Data Miner',
+                    goal='Scrape and provide every single tiny detail from the provided URLs.',
+                    backstory="You are the best at finding table data, dates, and fees from job websites.",
                     tools=[scrape_tool],
                     llm=llm,
                     verbose=True
                 )
 
+                # Writer: Detailed content aur table design ke liye
                 writer = Agent(
-                    role='Viral Content Writer',
-                    goal='Write a blog that feels like it was written by a human blogger for his audience.',
-                    backstory="""You are a famous Indian Job Blogger. You use 'Hinglish' (Hindi + English mix). 
-                    You use words like 'Doston', 'Good News', 'Zaroori Baat'. 
-                    Your tone is helpful and energetic, not like a boring robot. 
-                    You explain things simply, like you are talking to a younger brother.""",
+                    role='Senior SEO Content Architect',
+                    goal='Create a MASSIVE, 1200+ word, beautifully designed Hindi blog post.',
+                    backstory="""You are a professional blogger who knows that long articles rank better. 
+                    You use beautiful Markdown tables, bold headings, and detailed paragraphs. 
+                    You never write short text. Your style is clean, professional, and exhaustive.""",
                     llm=llm,
                     verbose=True
                 )
 
                 task1 = Task(
-                    description=f"Scrape {target_urls} and find every detail about {job_topic}.",
-                    expected_output="Detailed factual report.",
+                    description=f"Deeply scrape {target_urls} and find vacancies, dates, fees, and eligibility for {job_topic}.",
+                    expected_output="Detailed factual breakdown of the job.",
                     agent=researcher
                 )
 
                 task2 = Task(
                     description=f"""
-                    Write a 1000-word blog post in Human-Style Hinglish.
+                    Using the data, write a MEGA-DETAILED blog post in Hindi/Hinglish (Minimum 1000-1200 words).
                     
-                    RULES:
-                    1. NO ROBOTIC LANGUAGE. Use conversational Hindi.
-                    2. START with: "नमस्ते दोस्तों! अगर आप भी राजस्थान में सरकारी नौकरी का सपना देख रहे हैं, तो आज आपके लिए एक बहुत बड़ी खुशखबरी लेकर आया हूँ..."
-                    3. USE REAL LINKS: 
-                       - SSO Portal: https://sso.rajasthan.gov.in/
-                       - Official Website: https://rssb.rajasthan.gov.in/
-                    4. Tables must be clean and bold.
-                    5. Explain the selection process like a mentor.
+                    STRUCTURE RULES:
+                    1. **INTRODUCTION**: Minimum 3 long paragraphs. Talk about Rajasthan Govt's initiative and why this lab assistant role is important.
+                    2. **OVERVIEW TABLE**: Use a clean, wide Markdown table.
+                    3. **IMPORTANT DATES**: Don't just list them. Explain each date's significance in a bulleted paragraph.
+                    4. **APPLICATION FEE**: Create a separate detailed section with a table or bold bullets.
+                    5. **ELIGIBILITY & AGE**: Give a massive explanation. Include age relaxation details for SC/ST/OBC.
+                    6. **VACANCY BREAKDOWN**: Create a विभागानुसार (Department-wise) table.
+                    7. **HOW TO APPLY**: Write a 7-step guide, explaining each step in 2 lines.
+                    8. **LINKS**: Provide working links for SSO (https://sso.rajasthan.gov.in) and RSSB (https://rssb.rajasthan.gov.in).
+
+                    TONE: Encouraging, Factual, and Professional.
                     """,
-                    expected_output="A viral, human-written style blog post in Markdown.",
+                    expected_output="A massive, high-quality Markdown blog post ready for WordPress.",
                     agent=writer
                 )
 
-                my_crew = Crew(agents=[researcher, writer], tasks=[task1, task2])
+                my_crew = Crew(agents=[researcher, writer], tasks=[task1, task2], process=Process.sequential)
                 result = my_crew.kickoff()
 
-                st.success("Human-Style Blog Ready! ✅")
+                st.success("Mega-Detailed Blog Generated! ✅")
+                st.markdown("---")
                 st.markdown(result.raw)
             
             except Exception as e:
-                st.error(f"Error: {e}")
+                st.error(f"Error occurred: {e}")
+
+# --- FOOTER ---
+st.markdown("---")
+st.caption("AI-Powered Auto-Blogger for AK Unlocks Project")
