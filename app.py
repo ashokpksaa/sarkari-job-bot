@@ -1,6 +1,7 @@
 import streamlit as st
 import os
 from crewai import Agent, Task, Crew, Process
+from langchain_groq import ChatGroq
 from crewai.tools import tool
 from duckduckgo_search import DDGS
 
@@ -21,10 +22,9 @@ with st.sidebar:
             st.warning("⚠️ Please enter your Groq API Key to proceed.")
 
 if api_key:
-    # 👇 THE HACK: Groq API with the LATEST supported model!
-    os.environ["OPENAI_API_KEY"] = api_key 
-    os.environ["OPENAI_API_BASE"] = "https://api.groq.com/openai/v1"
-    os.environ["OPENAI_MODEL_NAME"] = "llama-3.3-70b-versatile" # <--- UPDATED LATEST MODEL
+    os.environ["GROQ_API_KEY"] = api_key
+    # 👇 CrewAI ko chup karane ke liye ek "Dummy" OpenAI key de di
+    os.environ["OPENAI_API_KEY"] = "sk-dummy-key-to-keep-crewai-happy-12345"
 
 # 3. Input Box
 job_topic = st.text_input("Enter Job Topic:", value="Railway ALP Vacancy 2026 details")
@@ -38,7 +38,7 @@ def search_internet(query: str):
             results = [r for r in ddgs.text(query, max_results=3)]
             return str(results)
     except Exception as e:
-        return f"Error searching internet: {e}"
+        return f"Error: {e}"
 
 # --- MAIN LOGIC ---
 if st.button("🚀 Generate Blog Post"):
@@ -47,12 +47,20 @@ if st.button("🚀 Generate Blog Post"):
     else:
         with st.spinner('🤖 AI is researching and writing... (Super Fast! ⚡)'):
             try:
+                # 👇 OFFICIAL GROQ CONNECTION (Ab tools perfectly kaam karenge)
+                groq_llm = ChatGroq(
+                    groq_api_key=api_key,
+                    model_name="llama-3.3-70b-versatile",
+                    temperature=0.5
+                )
+
                 # Agents
                 researcher = Agent(
                     role='Government Job Researcher',
                     goal='Search the internet to find 100% accurate details about government job notifications.',
                     backstory="Expert researcher who finds official dates, vacancies, fees, and eligibility.",
                     verbose=True,
+                    llm=groq_llm,
                     tools=[search_internet],
                     allow_delegation=False
                 )
@@ -62,7 +70,7 @@ if st.button("🚀 Generate Blog Post"):
                     goal='Write a highly engaging, SEO-optimized, and plagiarism-free blog post in Hinglish/Hindi.',
                     backstory="Expert content writer for a Sarkari Job website. Uses Headings, Bullet points, and bold text.",
                     verbose=True,
-                    tools=[],
+                    llm=groq_llm,
                     allow_delegation=False
                 )
 
