@@ -23,6 +23,8 @@ with st.sidebar:
 
 if api_key:
     os.environ["GROQ_API_KEY"] = api_key
+    # 👇 BYPASS CREWAI'S OPENAI ADDICTION (Fake Key ka jugaad)
+    os.environ["OPENAI_API_KEY"] = "NA" 
 
 # 3. Input Box
 job_topic = st.text_input("Enter Job Topic:", value="Railway ALP Vacancy 2026 details")
@@ -45,7 +47,7 @@ if st.button("🚀 Generate Blog Post"):
     else:
         with st.spinner('🤖 Groq AI is researching and writing... (Super Fast! ⚡)'):
             try:
-                # 👇 FINAL FIX: Groq ka official LangChain connection
+                # Groq ka connection
                 groq_llm = ChatGroq(
                     temperature=0.7,
                     groq_api_key=api_key,
@@ -59,7 +61,8 @@ if st.button("🚀 Generate Blog Post"):
                     backstory="Expert researcher who finds official dates, vacancies, fees, and eligibility.",
                     verbose=True,
                     llm=groq_llm,
-                    tools=[search_internet]
+                    tools=[search_internet],
+                    allow_delegation=False # <--- THIS FIXES THE OPENAI ERROR
                 )
 
                 writer = Agent(
@@ -67,7 +70,8 @@ if st.button("🚀 Generate Blog Post"):
                     goal='Write a highly engaging, SEO-optimized, and plagiarism-free blog post in Hinglish/Hindi.',
                     backstory="Expert content writer for a Sarkari Job website. Uses Headings, Bullet points, and bold text.",
                     verbose=True,
-                    llm=groq_llm
+                    llm=groq_llm,
+                    allow_delegation=False # <--- THIS FIXES THE OPENAI ERROR
                 )
 
                 # Tasks
