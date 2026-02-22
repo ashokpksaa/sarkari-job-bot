@@ -1,4 +1,4 @@
 streamlit
 crewai
+crewai-tools
 langchain-openai
-duckduckgo-search
