@@ -1,6 +1,7 @@
 import streamlit as st
 import os
-from crewai import Agent, Task, Crew, Process, LLM
+from crewai import Agent, Task, Crew, Process
+from langchain_groq import ChatGroq
 from crewai.tools import tool
 from duckduckgo_search import DDGS
 
@@ -9,7 +10,7 @@ st.set_page_config(page_title="Sarkari Job Auto-Blogger", page_icon="📝")
 st.title("📝 Sarkari Job Auto-Blogger (Powered by Groq 🚀)")
 st.markdown("Enter a government job topic (e.g., **SSC CGL 2026 Notification**) to generate an SEO-friendly blog post.")
 
-# 2. SECURE API KEY HANDLING (GROQ)
+# 2. SECURE API KEY HANDLING 
 with st.sidebar:
     st.header("⚙️ Configuration")
     try:
@@ -44,14 +45,14 @@ if st.button("🚀 Generate Blog Post"):
     else:
         with st.spinner('🤖 Groq AI is researching and writing... (Super Fast! ⚡)'):
             try:
-                # 👇 THE MAGIC FIX: Switched from Google to Groq's Llama-3 model
-                groq_llm = LLM(
-                    model="groq/llama3-70b-8192",  # Meta's powerful Llama 3 model via Groq
-                    api_key=api_key,
-                    temperature=0.7
+                # 👇 FINAL FIX: Groq ka official LangChain connection
+                groq_llm = ChatGroq(
+                    temperature=0.7,
+                    groq_api_key=api_key,
+                    model_name="llama3-70b-8192" 
                 )
 
-                # Agents (Now powered by Groq)
+                # Agents
                 researcher = Agent(
                     role='Government Job Researcher',
                     goal='Search the internet to find 100% accurate details about government job notifications.',
