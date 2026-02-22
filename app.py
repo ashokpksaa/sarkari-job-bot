@@ -21,7 +21,7 @@ with st.sidebar:
 if api_key:
     os.environ["OPENAI_API_KEY"] = api_key 
     os.environ["OPENAI_API_BASE"] = "https://api.groq.com/openai/v1"
-    os.environ["OPENAI_MODEL_NAME"] = "llama-3.3-70b-versatile"
+    os.environ["OPENAI_MODEL_NAME"] = "mixtral-8x7b-32768"
 
 # 3. Inputs
 job_topic = st.text_input("Enter Job Topic:", value="RSSB Lab Assistant Recruitment 2026")
@@ -38,7 +38,7 @@ if st.button("🚀 Generate Mega-Detailed Blog"):
         with st.spinner('🤖 AI is researching from multiple sources and designing your blog...'):
             try:
                 llm = ChatOpenAI(
-                    model_name="llama-3.3-70b-versatile",
+                    model_name="mixtral-8x7b-32768",
                     temperature=0.5,
                     api_key=api_key
                 )
