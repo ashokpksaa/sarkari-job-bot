@@ -1,4 +1,4 @@
 streamlit
 crewai
-langchain-google-genai
+langchain-groq
 duckduckgo-search
