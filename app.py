@@ -6,8 +6,8 @@ from langchain_openai import ChatOpenAI
 from crewai_tools import ScrapeWebsiteTool
 
 # 1. Page Config
-st.set_page_config(page_title="Sarkari Job Auto-Blogger Pro", page_icon="📝", layout="wide")
-st.title("🚀 Final Stable Auto-Blogger (Llama 3.1 Edition) 🔥")
+st.set_page_config(page_title="Sarkari Job Pro Auto-Blogger", page_icon="📝", layout="wide")
+st.title("🔥 Mega Sarkari Job Blogger v4.0 (Full Details) 🚀")
 
 # 2. Configuration
 with st.sidebar:
@@ -16,8 +16,6 @@ with st.sidebar:
     if not api_key:
         api_key = st.text_input("Enter Groq API Key:", type="password")
 
-# --- MODEL FIX ---
-# Mixtral aur Purana Llama hat gaya hai, isliye 3.1-8b-instant sabse best hai
 current_model = "llama-3.1-8b-instant"
 
 if api_key:
@@ -28,72 +26,73 @@ if api_key:
 # 3. Inputs
 job_topic = st.text_input("Enter Job Topic:", value="RSSB Lab Assistant Recruitment 2026")
 default_urls = "https://www.resultbharat.com/RSSB-Lab-Assistant_Advt-05-2026.html, https://www.freejobalert.com/articles/rssb-lab-assistant-recruitment-2026-apply-online-for-804-posts-3035740"
-target_urls = st.text_area("Target URL Links (Comma separated):", value=default_urls, height=100)
+target_urls = st.text_area("Trusted Links (Data Source):", value=default_urls, height=100)
 
 scrape_tool = ScrapeWebsiteTool()
 
-if st.button("🚀 Write My Mega Blog Now"):
+if st.button("🚀 Generate High-Quality Detailed Blog"):
     if not api_key:
         st.error("❌ API Key is missing!")
     else:
-        with st.spinner('🤖 AI is fetching data and writing a 1200+ word human-style blog...'):
+        with st.spinner('🤖 Scraping multiple sources and writing a massive 1500-word blog...'):
             try:
-                # LLM Setup
                 llm = ChatOpenAI(
                     model_name=current_model,
-                    temperature=0.7,
+                    temperature=0.6,
                     api_key=api_key
                 )
 
-                # Agents
+                # Researcher: Saara data nikaalne ke liye
                 researcher = Agent(
-                    role='Expert Researcher',
-                    goal='Extract deep details from the provided links.',
-                    backstory="You find every date, fee, and vacancy detail accurately.",
+                    role='Data Mining Expert',
+                    goal='Extract 100% accurate and deep details from the provided URLs.',
+                    backstory="You are a specialist in Government Job Data. You extract table data, specific dates, department-wise vacancies, and full eligibility rules.",
                     tools=[scrape_tool],
                     llm=llm,
                     verbose=True
                 )
 
+                # Writer: Designer blog likhne ke liye
                 writer = Agent(
-                    role='Professional Blogger',
-                    goal='Write a MASSIVE, 1200+ word SEO blog in Hindi/Hinglish.',
-                    backstory="""You are a pro blogger. You write long paragraphs, use large tables, 
-                    and maintain a helpful human tone (Doston, Khushkhabri, etc.). 
-                    You never skip details and expand every point.""",
+                    role='Viral SEO Content Architect',
+                    goal='Write a MASSIVE, 1500-word, highly attractive Hindi blog post.',
+                    backstory="""You are the king of Sarkari Job Blogging. You write long, engaging, and detailed posts. 
+                    You use beautiful Markdown tables, big bold headings, and a friendly human tone (Doston, Big Update, etc.). 
+                    You explain things so clearly that no one needs to check another website.""",
                     llm=llm,
                     verbose=True
                 )
 
-                # Tasks
                 task1 = Task(
-                    description=f"Scrape these links: {target_urls} for {job_topic}.",
-                    expected_output="Detailed factual report.",
+                    description=f"Scrape these links: {target_urls} for {job_topic}. Extract Vacancies, Dates, Fees, Department-wise posts, and full Eligibility.",
+                    expected_output="Exhaustive factual report with all tables found.",
                     agent=researcher
                 )
 
                 task2 = Task(
                     description=f"""
-                    Write a VERY LONG (1200+ words) Hindi/Hinglish blog.
+                    Write a VERY LONG (1500 words) Hindi blog post. 
                     
-                    MUST INCLUDE:
-                    1. Catchy Human-Style Intro (3 paragraphs).
-                    2. BIG Overview Table.
-                    3. Detailed Dates Section with explanations.
-                    4. Massive Eligibility & Age Section (Detail every point).
-                    5. Department-wise vacancy table.
-                    6. Step-by-Step 'How to Apply' guide.
+                    DESIGN RULES:
+                    1. **Attractive Title**: Use Emojis (e.g., 🔬, 🚀, ✅).
+                    2. **Engaging Intro**: Start with "नमस्कार दोस्तों! राजस्थान के बेरोजगार युवाओं के लिए मुख्यमंत्री भजनलाल शर्मा सरकार ने एक और बड़ी सौगात दी है..." (Write 3 long paragraphs).
+                    3. **Mega Overview Table**: A big, bold table with board name, vacancy, salary, and website.
+                    4. **Full Vacancy Table**: Create a detailed Department-wise table (Education, Agriculture, Forensic, etc.).
+                    5. **Age & Eligibility**: Explain rules in detail. Mention Age Relaxation (SC/ST/OBC - 5 years, etc.).
+                    6. **Step-by-Step Guide**: Write 7 detailed steps on 'How to Apply' via SSO Portal.
+                    7. **Exam Pattern**: If found, explain the paper pattern.
                     
-                    Use real links: https://sso.rajasthan.gov.in/ and https://rssb.rajasthan.gov.in/
+                    STRICTLY use these links: https://sso.rajasthan.gov.in/ and https://rssb.rajasthan.gov.in/
                     """,
-                    expected_output="Full length high-quality Markdown blog.",
+                    expected_output="Mega-detailed, high-quality Markdown blog post.",
                     agent=writer
                 )
 
-                my_crew = Crew(agents=[researcher, writer], tasks=[task1, task2])
+                my_crew = Crew(agents=[researcher, writer], tasks=[task1, task2], process=Process.sequential)
                 result = my_crew.kickoff()
 
-                st.success("Blog Generated Successfully! ✅")
+                st.success("Mega Blog Generated! ✅")
+                st.markdown("---")
                 st.markdown(result.raw)
             
             except Exception as e:
