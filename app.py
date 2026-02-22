@@ -1,7 +1,6 @@
 import streamlit as st
 import os
 from crewai import Agent, Task, Crew, Process
-from langchain_groq import ChatGroq
 from crewai.tools import tool
 from duckduckgo_search import DDGS
 
@@ -22,9 +21,10 @@ with st.sidebar:
             st.warning("⚠️ Please enter your Groq API Key to proceed.")
 
 if api_key:
-    os.environ["GROQ_API_KEY"] = api_key
-    # 👇 BYPASS CREWAI'S OPENAI ADDICTION (Fake Key ka jugaad)
-    os.environ["OPENAI_API_KEY"] = "NA" 
+    # 👇 THE ULTIMATE HACK: Trick CrewAI into thinking Groq is OpenAI!
+    os.environ["OPENAI_API_KEY"] = api_key 
+    os.environ["OPENAI_API_BASE"] = "https://api.groq.com/openai/v1"
+    os.environ["OPENAI_MODEL_NAME"] = "llama3-70b-8192"
 
 # 3. Input Box
 job_topic = st.text_input("Enter Job Topic:", value="Railway ALP Vacancy 2026 details")
@@ -45,24 +45,16 @@ if st.button("🚀 Generate Blog Post"):
     if not api_key:
         st.error("❌ Groq API Key missing! Please add it.")
     else:
-        with st.spinner('🤖 Groq AI is researching and writing... (Super Fast! ⚡)'):
+        with st.spinner('🤖 AI is researching and writing... (Super Fast! ⚡)'):
             try:
-                # Groq ka connection
-                groq_llm = ChatGroq(
-                    temperature=0.7,
-                    groq_api_key=api_key,
-                    model_name="llama3-70b-8192" 
-                )
-
-                # Agents
+                # Agents (No need to configure LLM, it automatically picks the fake OpenAI environment we set above!)
                 researcher = Agent(
                     role='Government Job Researcher',
                     goal='Search the internet to find 100% accurate details about government job notifications.',
                     backstory="Expert researcher who finds official dates, vacancies, fees, and eligibility.",
                     verbose=True,
-                    llm=groq_llm,
                     tools=[search_internet],
-                    allow_delegation=False # <--- THIS FIXES THE OPENAI ERROR
+                    allow_delegation=False
                 )
 
                 writer = Agent(
@@ -70,8 +62,8 @@ if st.button("🚀 Generate Blog Post"):
                     goal='Write a highly engaging, SEO-optimized, and plagiarism-free blog post in Hinglish/Hindi.',
                     backstory="Expert content writer for a Sarkari Job website. Uses Headings, Bullet points, and bold text.",
                     verbose=True,
-                    llm=groq_llm,
-                    allow_delegation=False # <--- THIS FIXES THE OPENAI ERROR
+                    tools=[],
+                    allow_delegation=False
                 )
 
                 # Tasks
