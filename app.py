@@ -21,11 +21,11 @@ with st.sidebar:
         if not api_key:
             st.warning("⚠️ Please enter your Groq API Key to proceed.")
 
-# 👇 THE OFFICIAL GROQ INTEGRATION
+# 👇 THE REAL HACK: Naye version me OPENAI_BASE_URL use hota hai!
 if api_key:
-    # CrewAI ko lagega OpenAI hai, par server Groq ka hit hoga!
     os.environ["OPENAI_API_KEY"] = api_key 
-    os.environ["OPENAI_API_BASE"] = "https://api.groq.com/openai/v1"
+    os.environ["OPENAI_BASE_URL"] = "https://api.groq.com/openai/v1" # <--- YAHI THI ASLI GADBAD
+    os.environ["OPENAI_MODEL_NAME"] = "llama-3.3-70b-versatile"
 
 # 3. Input Box
 job_topic = st.text_input("Enter Job Topic:", value="Railway ALP Vacancy 2026 details")
@@ -48,7 +48,7 @@ if st.button("🚀 Generate Blog Post"):
     else:
         with st.spinner('🤖 AI is researching and writing... (Super Fast! ⚡)'):
             try:
-                # Setup LLM using Groq's OpenAI-compatible endpoint and latest model
+                # Setup LLM using Groq's endpoint
                 llm = ChatOpenAI(
                     model_name="llama-3.3-70b-versatile",
                     temperature=0.7,
