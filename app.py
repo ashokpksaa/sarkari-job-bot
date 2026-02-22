@@ -21,10 +21,10 @@ with st.sidebar:
             st.warning("⚠️ Please enter your Groq API Key to proceed.")
 
 if api_key:
-    # 👇 THE ULTIMATE HACK: Trick CrewAI into thinking Groq is OpenAI!
+    # 👇 THE HACK: Groq API with the LATEST supported model!
     os.environ["OPENAI_API_KEY"] = api_key 
     os.environ["OPENAI_API_BASE"] = "https://api.groq.com/openai/v1"
-    os.environ["OPENAI_MODEL_NAME"] = "llama3-70b-8192"
+    os.environ["OPENAI_MODEL_NAME"] = "llama-3.3-70b-versatile" # <--- UPDATED LATEST MODEL
 
 # 3. Input Box
 job_topic = st.text_input("Enter Job Topic:", value="Railway ALP Vacancy 2026 details")
@@ -47,7 +47,7 @@ if st.button("🚀 Generate Blog Post"):
     else:
         with st.spinner('🤖 AI is researching and writing... (Super Fast! ⚡)'):
             try:
-                # Agents (No need to configure LLM, it automatically picks the fake OpenAI environment we set above!)
+                # Agents
                 researcher = Agent(
                     role='Government Job Researcher',
                     goal='Search the internet to find 100% accurate details about government job notifications.',
