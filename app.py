@@ -3,14 +3,14 @@ import os
 import datetime
 from crewai import Agent, Task, Crew, Process
 from langchain_openai import ChatOpenAI
-from crewai_tools import ScrapeWebsiteTool # <--- Naya Tool (Web Scraper)
+from crewai_tools import ScrapeWebsiteTool
 
 today_date = datetime.datetime.now().strftime("%B %d, %Y")
 
 # 1. Page Config
 st.set_page_config(page_title="Sarkari Job Auto-Blogger Pro", page_icon="🔬", layout="wide")
 st.title("🔬 Sarkari Job Auto-Blogger Pro (Scraper Mode) 🚀")
-st.markdown("Enter a job topic and your trusted website URLs. The AI will scrape ONLY these websites and write a perfect Hindi SEO blog.")
+st.markdown("Enter a job topic and your trusted website URLs. The AI will scrape ONLY these websites and write a detailed Hindi SEO blog.")
 
 # 2. SECURE API KEY HANDLING 
 with st.sidebar:
@@ -31,24 +31,22 @@ if api_key:
 # 3. Inputs
 job_topic = st.text_input("Enter Job Topic:", value="RSSB Lab Assistant Recruitment 2026")
 
-# Yahan user apni pasand ki websites daal sakta hai
 default_urls = "https://www.resultbharat.com/RSSB-Lab-Assistant_Advt-05-2026.html, https://www.freejobalert.com/articles/rssb-lab-assistant-recruitment-2026-apply-online-for-804-posts-3035740, https://www.adda247.com/exams/rajasthan/rssb-lab-assistant-recruitment-2026/"
 target_urls = st.text_area("Enter Trusted Website URLs (Comma separated):", value=default_urls, height=100)
 
 # --- TOOL DEFINITION ---
-# Ye tool kisi bhi website ke andar ghuskar uska data padh sakta hai
 scrape_tool = ScrapeWebsiteTool()
 
 # --- MAIN LOGIC ---
-if st.button("🚀 Scrape & Generate Blog Post"):
+if st.button("🚀 Scrape & Generate LONG Blog Post"):
     if not api_key:
         st.error("❌ Groq API Key missing! Please add it.")
     else:
-        with st.spinner('🤖 AI is scraping your provided websites and writing the blog... (This may take 1-2 minutes)'):
+        with st.spinner('🤖 AI is scraping and writing a detailed 1000+ word blog... (Please wait 1-2 minutes)'):
             try:
                 llm = ChatOpenAI(
                     model_name="llama-3.3-70b-versatile",
-                    temperature=0.3, # Low creativity for factual accuracy
+                    temperature=0.4, # Thoda badhaya taaki lamba likh sake
                     api_key=api_key,
                     base_url="https://api.groq.com/openai/v1"
                 )
@@ -56,18 +54,19 @@ if st.button("🚀 Scrape & Generate Blog Post"):
                 # --- AGENTS ---
                 researcher = Agent(
                     role='Senior Web Scraper & Fact Checker',
-                    goal='Scrape the provided URLs and extract 100% accurate job details.',
-                    backstory="You are an expert data extractor. You will use the ScrapeWebsiteTool to read the content of the specific URLs provided by the user. Extract exact Dates, Vacancy numbers, Fees, and Eligibility. Do not search the whole internet, ONLY scrape the provided links.",
+                    goal='Scrape the provided URLs and extract comprehensive and accurate job details.',
+                    backstory="You are an expert data extractor. Use the ScrapeWebsiteTool on the provided URLs. Extract Dates, Vacancies, Fees, and deeply detailed Eligibility criteria.",
                     verbose=True,
                     llm=llm,
                     tools=[scrape_tool],
                     allow_delegation=False
                 )
 
+                # 👇 WRITER PROMPT ME JADOO KIYA HAI 👇
                 writer = Agent(
-                    role='Pro Hindi SEO Blogger',
-                    goal='Format the scraped data into a highly structured, professional Hindi blog post.',
-                    backstory="You are a top-tier Sarkari Job blogger. You strictly follow formatting templates. You write in professional Hindi (Devanagari) mixed with common English terms.",
+                    role='Pro Hindi SEO Blogger & Content Expansion Expert',
+                    goal='Format the scraped data into a highly structured, LONG, and deeply detailed professional Hindi blog post (Minimum 1000 words).',
+                    backstory="You are a top-tier Sarkari Job blogger. You NEVER write short summaries or one-liners. You expand every single point into 2-3 detailed sentences so a 10th-pass student can understand easily. You write in highly engaging Hindi (Devanagari).",
                     verbose=True,
                     llm=llm,
                     allow_delegation=False
@@ -76,13 +75,12 @@ if st.button("🚀 Scrape & Generate Blog Post"):
                 # --- TASKS ---
                 task1 = Task(
                     description=f"""
-                    The job topic is: '{job_topic}'.
-                    Here are the URLs you MUST scrape: {target_urls}
+                    Job topic: '{job_topic}'.
+                    URLs to scrape: {target_urls}
                     
                     INSTRUCTIONS:
-                    1. Use the 'scrape_tool' on these specific URLs to extract information.
-                    2. Find the exact Total Vacancies, Category-wise vacancies, Start Date, Last Date, Exam Date, Application Fees, Age Limit, and Education Qualification.
-                    3. Compile this into a detailed factual summary.
+                    1. Use the 'scrape_tool' on these specific URLs.
+                    2. Extract exhaustive details: Total Vacancies, Category/Department wise vacancies, All Dates, Application Fees, Age Limit rules, and full Education Qualification details.
                     """,
                     expected_output="A comprehensive factual summary extracted strictly from the provided URLs.",
                     agent=researcher
@@ -90,42 +88,49 @@ if st.button("🚀 Scrape & Generate Blog Post"):
 
                 task2 = Task(
                     description=f"""
-                    Using ONLY the facts from the researcher, write a complete SEO blog post in HINDI.
-                    You MUST strictly use the following Markdown template and emojis:
+                    Using ONLY the facts from the researcher, write a LONG, detailed, and complete SEO blog post in HINDI (Minimum 800-1000 words).
+                    
+                    CRITICAL INSTRUCTIONS FOR LENGTH & DETAIL:
+                    - Do NOT write short 1-line bullet points. Explain each point properly in full Hindi sentences.
+                    - The 'Introduction' MUST be at least 2-3 paragraphs long, explaining the importance of this job and golden opportunity for candidates.
+                    - Under 'How to Apply', write detailed step-by-step instructions (e.g., "सबसे पहले उम्मीदवार को आधिकारिक वेबसाइट पर जाना होगा... फिर रिक्रूटमेंट पोर्टल पर क्लिक करें...").
+                    - Detail the Selection Process properly.
+                    
+                    You MUST strictly use the following Markdown template:
 
                     **Meta Title:** [Catchy Title with Post Name and Vacancy]
-                    **Meta Description:** [Short 2 line description]
+                    **Meta Description:** [Short 3 line description]
                     **Tags/Keywords:** [Comma separated tags]
                     ---
-                    # 🔬 [Job Name]: [Total Vacancies] पदों पर बम्पर भर्ती
+                    # 🔬 [Job Name]: [Total Vacancies] पदों पर बम्पर भर्ती, पूरी जानकारी यहाँ देखें
                     
-                    [1-2 paragraphs of introduction in Hindi]
+                    [2-3 Detailed paragraphs of introduction]
                     
                     ### 📊 भर्ती का संक्षिप्त विवरण (Overview)
-                    [Create a Markdown Table with Board, Post Name, Total Vacancy, Location, Salary, Website]
+                    [Create a Markdown Table with detailed rows]
                     
                     ### 🗓️ महत्वपूर्ण तिथियां (Important Dates)
-                    [Bullet points with emojis for dates]
+                    [Detailed bullet points explaining what each date means]
                     
                     ### 💳 आवेदन शुल्क (Application Fee)
-                    [Bullet points for category wise fees]
+                    [Explain fee structure properly for all categories]
                     
                     ### 🎓 आयु सीमा और शैक्षणिक योग्यता (Age & Eligibility)
-                    [Detailed bullets]
+                    [Detailed paragraphs explaining age limits, relaxation rules, and exact degree/diploma required]
                     
                     ### 🏢 विभागानुसार रिक्तियों का विवरण (Vacancy Details)
-                    [Create a Markdown Table if category/department data is available, otherwise normal bullets]
+                    [Create a proper Markdown Table for category/department data]
                     
                     ### 📝 चयन प्रक्रिया (Selection Process)
-                    [Numbered list]
+                    [Explain written test, document verification, etc., in detailed points]
                     
                     ### 💻 आवेदन कैसे करें? (How to Apply Online)
-                    [Step by step numbered list]
+                    [Step by step detailed guide - minimum 5-6 steps]
                     
                     ### 🔗 महत्वपूर्ण लिंक्स (Important Links)
-                    [List the official links if found]
+                    [List official links]
                     """,
-                    expected_output="A perfectly formatted Hindi Markdown blog post following the exact template provided.",
+                    expected_output="A perfectly formatted, LONG, and highly detailed Hindi Markdown blog post.",
                     agent=writer
                 )
 
@@ -133,7 +138,7 @@ if st.button("🚀 Scrape & Generate Blog Post"):
                 my_crew = Crew(agents=[researcher, writer], tasks=[task1, task2], process=Process.sequential)
                 result = my_crew.kickoff()
 
-                st.success("Scraping Complete! Factual Blog Post Generated! ✅")
+                st.success("Detailed Scraping & Writing Complete! ✅")
                 if hasattr(result, 'raw'):
                     st.markdown(result.raw)
                 else:
