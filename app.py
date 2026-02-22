@@ -1,5 +1,6 @@
 import streamlit as st
 import os
+import re  # <--- NEW: Text cleaner ke liye
 from crewai import Agent, Task, Crew, Process
 from langchain_openai import ChatOpenAI
 from crewai.tools import tool
@@ -21,14 +22,17 @@ with st.sidebar:
         if not api_key:
             st.warning("⚠️ Please enter your Groq API Key to proceed.")
 
-# 👇 THE REAL HACK: Naye version me OPENAI_BASE_URL use hota hai!
 if api_key:
     os.environ["OPENAI_API_KEY"] = api_key 
-    os.environ["OPENAI_BASE_URL"] = "https://api.groq.com/openai/v1" # <--- YAHI THI ASLI GADBAD
+    os.environ["OPENAI_BASE_URL"] = "https://api.groq.com/openai/v1"
     os.environ["OPENAI_MODEL_NAME"] = "llama-3.3-70b-versatile"
 
 # 3. Input Box
 job_topic = st.text_input("Enter Job Topic:", value="Railway ALP Vacancy 2026 details")
+
+# --- THE FIX: Clean the topic for the Search Tool ---
+# AI ko search karne me aasaani ho, isliye special characters hata diye
+safe_topic = re.sub(r'[^a-zA-Z0-9\s]', ' ', job_topic)
 
 # --- TOOL DEFINITION ---
 @tool
@@ -48,7 +52,6 @@ if st.button("🚀 Generate Blog Post"):
     else:
         with st.spinner('🤖 AI is researching and writing... (Super Fast! ⚡)'):
             try:
-                # Setup LLM using Groq's endpoint
                 llm = ChatOpenAI(
                     model_name="llama-3.3-70b-versatile",
                     temperature=0.7,
@@ -56,11 +59,11 @@ if st.button("🚀 Generate Blog Post"):
                     base_url="https://api.groq.com/openai/v1"
                 )
 
-                # Agents
+                # Agents (Strict instructions added to prevent XML hallucination)
                 researcher = Agent(
                     role='Government Job Researcher',
                     goal='Search the internet to find 100% accurate details about government job notifications.',
-                    backstory="Expert researcher who finds official dates, vacancies, fees, and eligibility.",
+                    backstory="Expert researcher. IMPORTANT: When using tools, strictly use valid JSON. NEVER use <function> tags.",
                     verbose=True,
                     llm=llm,
                     tools=[search_internet],
@@ -76,9 +79,9 @@ if st.button("🚀 Generate Blog Post"):
                     allow_delegation=False
                 )
 
-                # Tasks
+                # Tasks (Search ke liye 'safe_topic', Blog title ke liye original 'job_topic')
                 task1 = Task(
-                    description=f"Use the tool to find official details about '{job_topic}'. Find: Vacancies, Eligibility, Age Limit, Dates, and Fee.",
+                    description=f"Use the tool to find official details about '{safe_topic}'. Find: Vacancies, Eligibility, Age Limit, Dates, and Fee. Only pass simple text to the tool.",
                     expected_output="A bulleted list of factual details.",
                     agent=researcher
                 )
