@@ -1,32 +1,30 @@
 import streamlit as st
 import os
-from crewai import Agent, Task, Crew, Process
-from langchain_google_genai import ChatGoogleGenerativeAI
+from crewai import Agent, Task, Crew, Process, LLM
 from crewai.tools import tool
 from duckduckgo_search import DDGS
 
 # 1. Page Config
 st.set_page_config(page_title="Sarkari Job Auto-Blogger", page_icon="📝")
-st.title("📝 Sarkari Job Auto-Blogger AI")
+st.title("📝 Sarkari Job Auto-Blogger (Powered by Groq 🚀)")
 st.markdown("Enter a government job topic (e.g., **SSC CGL 2026 Notification**) to generate an SEO-friendly blog post.")
 
-# 2. SECURE API KEY HANDLING (No Hardcoding!)
+# 2. SECURE API KEY HANDLING (GROQ)
 with st.sidebar:
     st.header("⚙️ Configuration")
     try:
-        api_key = st.secrets["GOOGLE_API_KEY"]
-        st.success("✅ API Key Loaded Securely from Secrets!")
+        api_key = st.secrets["GROQ_API_KEY"]
+        st.success("✅ Groq API Key Loaded Securely!")
     except:
-        api_key = st.text_input("Enter Google API Key manually:", type="password")
+        api_key = st.text_input("Enter Groq API Key (starts with gsk_):", type="password")
         if not api_key:
-            st.warning("⚠️ Please enter your API Key to proceed.")
+            st.warning("⚠️ Please enter your Groq API Key to proceed.")
 
 if api_key:
-    os.environ["GOOGLE_API_KEY"] = api_key
-    os.environ["GEMINI_API_KEY"] = api_key
+    os.environ["GROQ_API_KEY"] = api_key
 
 # 3. Input Box
-job_topic = st.text_input("Enter Job Topic:", value="SSC CGL 2026 Notification details")
+job_topic = st.text_input("Enter Job Topic:", value="Railway ALP Vacancy 2026 details")
 
 # --- TOOL DEFINITION ---
 @tool
@@ -42,25 +40,24 @@ def search_internet(query: str):
 # --- MAIN LOGIC ---
 if st.button("🚀 Generate Blog Post"):
     if not api_key:
-        st.error("❌ API Key missing! Please add it.")
+        st.error("❌ Groq API Key missing! Please add it.")
     else:
-        with st.spinner('🤖 AI Agents are researching and writing... (Please wait)'):
+        with st.spinner('🤖 Groq AI is researching and writing... (Super Fast! ⚡)'):
             try:
-                # Brain setup - Using stable flash model
-                llm = ChatGoogleGenerativeAI(
-                    model="gemini-2.0-flash",
-                    verbose=True,
-                    temperature=0.7,
-                    api_key=api_key 
+                # 👇 THE MAGIC FIX: Switched from Google to Groq's Llama-3 model
+                groq_llm = LLM(
+                    model="groq/llama3-70b-8192",  # Meta's powerful Llama 3 model via Groq
+                    api_key=api_key,
+                    temperature=0.7
                 )
 
-                # Agents
+                # Agents (Now powered by Groq)
                 researcher = Agent(
                     role='Government Job Researcher',
                     goal='Search the internet to find 100% accurate details about government job notifications.',
                     backstory="Expert researcher who finds official dates, vacancies, fees, and eligibility.",
                     verbose=True,
-                    llm=llm,
+                    llm=groq_llm,
                     tools=[search_internet]
                 )
 
@@ -69,7 +66,7 @@ if st.button("🚀 Generate Blog Post"):
                     goal='Write a highly engaging, SEO-optimized, and plagiarism-free blog post in Hinglish/Hindi.',
                     backstory="Expert content writer for a Sarkari Job website. Uses Headings, Bullet points, and bold text.",
                     verbose=True,
-                    llm=llm
+                    llm=groq_llm
                 )
 
                 # Tasks
