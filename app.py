@@ -27,10 +27,10 @@ scrape_tool = ScrapeWebsiteTool()
 
 # --- INPUT SECTION ---
 st.subheader("🎯 Step 1: Job Details")
-job_topic = st.text_input("Enter Job Title (e.g., Railway ALP Recruitment 2026):", value="Railway ALP Recruitment 2026")
+job_topic = st.text_input("Enter Job Title (e.g., RRB Group D Recruitment 2026):", value="RRB Group D Recruitment 2026")
 
 st.subheader("🔗 Step 2: Paste Direct Link")
-target_url = st.text_input("ResultBharat, FreeJobAlert या Adda247 का सीधा लिंक यहाँ पेस्ट करें:", placeholder="https://www.resultbharat.com/...")
+target_url = st.text_input("Job Website का सीधा लिंक यहाँ पेस्ट करें:", placeholder="https://jobapply24.in/...")
 
 # --- MAIN LOGIC ---
 if st.button("🚀 Generate 100% Accurate Blog"):
@@ -39,19 +39,21 @@ if st.button("🚀 Generate 100% Accurate Blog"):
     elif not target_url.strip():
         st.error("❌ Kripya Step 2 mein website ka link zaroor dalein!")
     else:
-        with st.spinner('🤖 AI is reading your exact link and filling the SarkariResult template...'):
+        with st.spinner('🤖 AI is reading your exact link and ignoring sidebars/ads...'):
             try:
                 llm = ChatOpenAI(
                     model_name=current_model,
-                    temperature=0.3, # Strict facts only
+                    temperature=0.1, # Temperature aur kam kar diya taaki strictly rule follow kare
                     api_key=api_key,
                     base_url="https://api.groq.com/openai/v1"
                 )
 
+                # 👇 RESEARCHER ME "FOCUS LOCK" LAGA DIYA HAI 👇
                 researcher = Agent(
-                    role='Data Extractor',
-                    goal='Extract strict facts (Dates, Vacancies, Fees) ONLY from the provided URL.',
-                    backstory="You extract pure facts from the specific job URL. You never guess or invent data.",
+                    role='Targeted Data Extractor',
+                    goal=f'Extract strict facts ONLY for the job matching "{job_topic}". IGNORE ALL OTHER JOBS on the page.',
+                    backstory="""You are an expert data extractor. Job websites have sidebars, menus, and 'Latest Posts' widgets containing unrelated jobs (like Constable, Police, etc.). 
+                    YOUR STRICT RULE: You must completely IGNORE any data that does not belong to the requested Job Title. Only extract details from the main article body.""",
                     tools=[scrape_tool],
                     llm=llm,
                     verbose=True
@@ -60,24 +62,30 @@ if st.button("🚀 Generate 100% Accurate Blog"):
                 writer = Agent(
                     role='SarkariResult Style Formatter',
                     goal='Fill the exact markdown template dynamically using ONLY the extracted data.',
-                    backstory="You strictly follow the Markdown design. You do not write extra paragraphs.",
+                    backstory="You strictly follow the Markdown design. You do not write extra paragraphs. If data is missing, you write 'जल्द उपलब्ध होगा (Update Soon)'.",
                     llm=llm,
                     verbose=True
                 )
 
+                # 👇 TASK 1 ME BHI WARNING DAAL DI 👇
                 task1 = Task(
                     description=f"""
-                    Scrape this exact URL ONLY: {target_url}
-                    Extract Total Vacancies, Start/End Dates, Fees for all categories, Age Limit, and Eligibility for '{job_topic}'.
+                    Scrape this exact URL: {target_url}
+                    
+                    CRITICAL WARNING: The page contains ads and links to OTHER jobs. 
+                    If you see data for 'Constable' or anything else, IGNORE IT. 
+                    Look ONLY for data matching: '{job_topic}'.
+                    
+                    Extract Total Vacancies, Start/End Dates, Fees for all categories, Age Limit, and Eligibility SPECIFICALLY for '{job_topic}'.
                     """,
-                    expected_output="Pure factual data extracted directly from the provided website.",
+                    expected_output="Pure factual data extracted directly from the main article, ignoring sidebars.",
                     agent=researcher
                 )
 
                 task2 = Task(
                     description=f"""
                     You MUST strictly use the exact Markdown format provided below. Fill in the brackets [ ] dynamically with the exact data from the researcher. 
-                    If a specific piece of data is missing from the scraped content, write "जल्द उपलब्ध होगा (Update Soon)".
+                    If a specific piece of data is missing, write "जल्द उपलब्ध होगा (Update Soon)".
 
                     **Meta Title:** [Job Title]: [Total Vacancy] पदों पर बम्पर भर्ती
                     **Meta Description:** [Board Name] द्वारा [Job Title] के पदों पर अधिसूचना जारी। आयु, योग्यता और ऑनलाइन आवेदन की जानकारी यहाँ पढ़ें।
@@ -135,7 +143,8 @@ if st.button("🚀 Generate 100% Accurate Blog"):
 
                     ## 📝 चयन प्रक्रिया (Selection Process)
                     1.  **[Step 1 - e.g., Written Exam / CBT]**
-                    2.  **[Step 2 - e.g., Document Verification (DV)]**
+                    2.  **[Step 2 - e.g., Physical Test (PET/PST) if applicable]**
+                    3.  **[Step 3 - e.g., Document Verification (DV)]**
 
                     ---
 
