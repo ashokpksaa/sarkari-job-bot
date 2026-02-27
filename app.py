@@ -1,14 +1,15 @@
 import streamlit as st
 import os
 import requests
+from bs4 import BeautifulSoup
 from crewai import Agent, Task, Crew, Process
 from langchain_openai import ChatOpenAI
 from crewai.tools import tool
 
 # 1. Page Config
 st.set_page_config(page_title="Sarkari Job Pro Auto-Blogger", page_icon="🔥", layout="wide")
-st.title("🔥 100% Accurate Sarkari Blogger (Jina AI Mode) 🚀")
-st.markdown("अब कोई फालतू डेटा नहीं। सिर्फ 100% असली वेबसाइट का डेटा!")
+st.title("🔥 100% Accurate Sarkari Blogger (No-Limit Mode) 🚀")
+st.markdown("अब कोई डेटा नहीं छूटेगा! यह टूल पूरा पेज स्कैन करेगा।")
 
 # 2. Configuration
 with st.sidebar:
@@ -23,17 +24,26 @@ if api_key:
     os.environ["OPENAI_API_KEY"] = api_key 
     os.environ["OPENAI_BASE_URL"] = "https://api.groq.com/openai/v1"
 
-# --- THE JINA AI SUPER SCRAPER ---
+# --- DEEP SURGEON SCRAPER TOOL ---
 @tool
-def jina_reader(url: str):
-    """Bypasses Cloudflare and extracts ONLY the pure markdown content of the webpage."""
+def deep_scraper(url: str):
+    """Scrapes the website deeply, removes sidebars, and returns up to 25000 characters."""
     try:
-        # Jina AI kisi bhi URL ka kachra saaf karke pure text deta hai
-        jina_url = f"https://r.jina.ai/{url}"
-        response = requests.get(jina_url, timeout=20)
-        text = response.text
-        # Pehle 8000 characters hi AI ko denge taaki confusion na ho
-        return text[:8000] 
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+        response = requests.get(url, headers=headers, timeout=15)
+        soup = BeautifulSoup(response.content, 'html.parser')
+
+        # कचरा साफ करना (Sidebars, Menus, Footer, Ads)
+        for junk in soup(['aside', 'nav', 'footer', 'header', 'script', 'style', 'noscript']):
+            junk.decompose()
+
+        # क्लीन टेक्स्ट निकालना
+        text = soup.get_text(separator='\n', strip=True)
+        
+        # लिमिट बढ़ाकर 25,000 कर दी है ताकि नीचे छिपी हुई टेबल्स भी AI पढ़ सके
+        return text[:25000] 
     except Exception as e:
         return f"Error scraping: {e}"
 
@@ -51,38 +61,37 @@ if st.button("🚀 Generate 100% Accurate Blog"):
     elif not target_url.strip():
         st.error("❌ Kripya Step 2 mein website ka link zaroor dalein!")
     else:
-        with st.spinner('✂️ Jina AI is bypassing security and extracting clean data...'):
+        with st.spinner('✂️ Scanning the ENTIRE webpage deeply for your job details...'):
             try:
                 llm = ChatOpenAI(
                     model_name=current_model,
-                    temperature=0.0, # Zero creativity, ONLY facts
+                    temperature=0.1, 
                     api_key=api_key,
                     base_url="https://api.groq.com/openai/v1"
                 )
 
                 researcher = Agent(
-                    role='Targeted Data Extractor',
-                    goal=f'Extract strict facts for "{job_topic}" from the Jina text.',
-                    backstory="You are a strict data parser. You only extract facts that match the requested Job Title.",
-                    tools=[jina_reader], 
+                    role='Deep Data Extractor',
+                    goal=f'Extract all facts related ONLY to "{job_topic}".',
+                    backstory="You are a meticulous data parser. The text contains the full webpage. Ignore unrelated job links (like Constable) and find the exact dates, fees, and vacancies for the requested job.",
+                    tools=[deep_scraper], 
                     llm=llm,
                     verbose=True
                 )
 
                 writer = Agent(
                     role='SarkariResult Style Formatter',
-                    goal='Fill the exact markdown template dynamically.',
-                    backstory="You strictly follow the Markdown design. Fill the data accurately. If missing, write 'जल्द उपलब्ध होगा (Update Soon)'.",
+                    goal='Fill the markdown template with extracted data.',
+                    backstory="You strictly follow the Markdown design. You do not leave blanks. If data is genuinely missing from the text, write 'जल्द उपलब्ध होगा (Update Soon)'.",
                     llm=llm,
                     verbose=True
                 )
 
                 task1 = Task(
                     description=f"""
-                    Use the 'jina_reader' tool on this URL: {target_url}
-                    Focus ONLY on details related to '{job_topic}'.
+                    Use the 'deep_scraper' tool on this URL: {target_url}
+                    Focus ONLY on details related to '{job_topic}'. Ignore 'Latest Jobs' widgets.
                     Extract Total Vacancies, Start/End Dates, Fees for all categories, Age Limit, and Eligibility.
-                    Do not guess.
                     """,
                     expected_output="Pure factual data for the specific job.",
                     agent=researcher
