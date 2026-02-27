@@ -3,3 +3,5 @@ crewai
 crewai-tools
 langchain-openai
 duckduckgo-search
+beautifulsoup4
+requests
