@@ -17,7 +17,8 @@ with st.sidebar:
         api_key = st.text_input("Enter Groq API Key:", type="password")
 
 # 3.1-70b model (Taaki 429 limit error na aaye)
-current_model = "gemma2-9b-it"
+# 👇 Wapas apna sabse stable aur best model laga dein 👇
+current_model = "llama-3.3-70b-versatile"
 
 if api_key:
     os.environ["OPENAI_API_KEY"] = api_key 
