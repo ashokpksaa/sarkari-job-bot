@@ -1,15 +1,14 @@
 import streamlit as st
 import os
 import requests
-from bs4 import BeautifulSoup
 from crewai import Agent, Task, Crew, Process
 from langchain_openai import ChatOpenAI
 from crewai.tools import tool
 
 # 1. Page Config
 st.set_page_config(page_title="Sarkari Job Pro Auto-Blogger", page_icon="🔥", layout="wide")
-st.title("🔥 100% Accurate Sarkari Blogger (Surgeon Mode) 🚀")
-st.markdown("अब यह टूल वेबसाइट का साइडबार और कचरा हटाकर सिर्फ असली जॉब पढ़ेगा!")
+st.title("🔥 100% Accurate Sarkari Blogger (Jina AI Mode) 🚀")
+st.markdown("अब कोई फालतू डेटा नहीं। सिर्फ 100% असली वेबसाइट का डेटा!")
 
 # 2. Configuration
 with st.sidebar:
@@ -24,27 +23,17 @@ if api_key:
     os.environ["OPENAI_API_KEY"] = api_key 
     os.environ["OPENAI_BASE_URL"] = "https://api.groq.com/openai/v1"
 
-# --- CUSTOM SURGEON SCRAPER TOOL ---
+# --- THE JINA AI SUPER SCRAPER ---
 @tool
-def smart_scraper(url: str):
-    """Scrapes ONLY the main content of a job website, destroying sidebars, menus, and ads."""
+def jina_reader(url: str):
+    """Bypasses Cloudflare and extracts ONLY the pure markdown content of the webpage."""
     try:
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
-        response = requests.get(url, headers=headers, timeout=15)
-        soup = BeautifulSoup(response.content, 'html.parser')
-
-        # कचरा साफ़ करना (Removing Sidebar, Header, Footer, Nav)
-        for junk in soup(['aside', 'nav', 'footer', 'header', 'script', 'style', 'div.sidebar', 'div.widget']):
-            junk.decompose()
-
-        # सिर्फ मुख्य आर्टिकल खोजना
-        main_content = soup.find('article') or soup.find('main') or soup.body
-        if main_content:
-            # फालतू स्पेस हटाकर क्लीन टेक्स्ट निकालना
-            text = main_content.get_text(separator='\n', strip=True)
-            # AI को कन्फ्यूज़न से बचाने के लिए शुरूआती 6000 अक्षर ही भेजना (जहाँ मेन डिटेल्स होती हैं)
-            return text[:6000] 
-        return "No main content found."
+        # Jina AI kisi bhi URL ka kachra saaf karke pure text deta hai
+        jina_url = f"https://r.jina.ai/{url}"
+        response = requests.get(jina_url, timeout=20)
+        text = response.text
+        # Pehle 8000 characters hi AI ko denge taaki confusion na ho
+        return text[:8000] 
     except Exception as e:
         return f"Error scraping: {e}"
 
@@ -62,20 +51,20 @@ if st.button("🚀 Generate 100% Accurate Blog"):
     elif not target_url.strip():
         st.error("❌ Kripya Step 2 mein website ka link zaroor dalein!")
     else:
-        with st.spinner('✂️ Cleaning website junk and reading main article...'):
+        with st.spinner('✂️ Jina AI is bypassing security and extracting clean data...'):
             try:
                 llm = ChatOpenAI(
                     model_name=current_model,
-                    temperature=0.1, 
+                    temperature=0.0, # Zero creativity, ONLY facts
                     api_key=api_key,
                     base_url="https://api.groq.com/openai/v1"
                 )
 
                 researcher = Agent(
                     role='Targeted Data Extractor',
-                    goal=f'Extract strict facts for "{job_topic}" from the cleaned text.',
-                    backstory="You are an expert data extractor. The text provided to you has been cleaned of sidebars. Extract the exact Dates, Vacancies, and Fees.",
-                    tools=[smart_scraper], # Custom tool lagaya hai
+                    goal=f'Extract strict facts for "{job_topic}" from the Jina text.',
+                    backstory="You are a strict data parser. You only extract facts that match the requested Job Title.",
+                    tools=[jina_reader], 
                     llm=llm,
                     verbose=True
                 )
@@ -90,10 +79,12 @@ if st.button("🚀 Generate 100% Accurate Blog"):
 
                 task1 = Task(
                     description=f"""
-                    Use the 'smart_scraper' tool on this URL: {target_url}
-                    Extract Total Vacancies, Start/End Dates, Fees for all categories, Age Limit, and Eligibility SPECIFICALLY for '{job_topic}'.
+                    Use the 'jina_reader' tool on this URL: {target_url}
+                    Focus ONLY on details related to '{job_topic}'.
+                    Extract Total Vacancies, Start/End Dates, Fees for all categories, Age Limit, and Eligibility.
+                    Do not guess.
                     """,
-                    expected_output="Pure factual data.",
+                    expected_output="Pure factual data for the specific job.",
                     agent=researcher
                 )
 
