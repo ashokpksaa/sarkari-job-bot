@@ -1,14 +1,15 @@
 import streamlit as st
 import os
-import datetime
+import requests
+from bs4 import BeautifulSoup
 from crewai import Agent, Task, Crew, Process
 from langchain_openai import ChatOpenAI
-from crewai_tools import ScrapeWebsiteTool
+from crewai.tools import tool
 
 # 1. Page Config
 st.set_page_config(page_title="Sarkari Job Pro Auto-Blogger", page_icon="🔥", layout="wide")
-st.title("🔥 100% Accurate Sarkari Blogger 🚀")
-st.markdown("गलत डेटा से बचें! सही वेबसाइट का सीधा लिंक डालें और परफेक्ट आर्टिकल पाएं।")
+st.title("🔥 100% Accurate Sarkari Blogger (Surgeon Mode) 🚀")
+st.markdown("अब यह टूल वेबसाइट का साइडबार और कचरा हटाकर सिर्फ असली जॉब पढ़ेगा!")
 
 # 2. Configuration
 with st.sidebar:
@@ -23,7 +24,29 @@ if api_key:
     os.environ["OPENAI_API_KEY"] = api_key 
     os.environ["OPENAI_BASE_URL"] = "https://api.groq.com/openai/v1"
 
-scrape_tool = ScrapeWebsiteTool()
+# --- CUSTOM SURGEON SCRAPER TOOL ---
+@tool
+def smart_scraper(url: str):
+    """Scrapes ONLY the main content of a job website, destroying sidebars, menus, and ads."""
+    try:
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+        response = requests.get(url, headers=headers, timeout=15)
+        soup = BeautifulSoup(response.content, 'html.parser')
+
+        # कचरा साफ़ करना (Removing Sidebar, Header, Footer, Nav)
+        for junk in soup(['aside', 'nav', 'footer', 'header', 'script', 'style', 'div.sidebar', 'div.widget']):
+            junk.decompose()
+
+        # सिर्फ मुख्य आर्टिकल खोजना
+        main_content = soup.find('article') or soup.find('main') or soup.body
+        if main_content:
+            # फालतू स्पेस हटाकर क्लीन टेक्स्ट निकालना
+            text = main_content.get_text(separator='\n', strip=True)
+            # AI को कन्फ्यूज़न से बचाने के लिए शुरूआती 6000 अक्षर ही भेजना (जहाँ मेन डिटेल्स होती हैं)
+            return text[:6000] 
+        return "No main content found."
+    except Exception as e:
+        return f"Error scraping: {e}"
 
 # --- INPUT SECTION ---
 st.subheader("🎯 Step 1: Job Details")
@@ -39,53 +62,44 @@ if st.button("🚀 Generate 100% Accurate Blog"):
     elif not target_url.strip():
         st.error("❌ Kripya Step 2 mein website ka link zaroor dalein!")
     else:
-        with st.spinner('🤖 AI is reading your exact link and ignoring sidebars/ads...'):
+        with st.spinner('✂️ Cleaning website junk and reading main article...'):
             try:
                 llm = ChatOpenAI(
                     model_name=current_model,
-                    temperature=0.1, # Temperature aur kam kar diya taaki strictly rule follow kare
+                    temperature=0.1, 
                     api_key=api_key,
                     base_url="https://api.groq.com/openai/v1"
                 )
 
-                # 👇 RESEARCHER ME "FOCUS LOCK" LAGA DIYA HAI 👇
                 researcher = Agent(
                     role='Targeted Data Extractor',
-                    goal=f'Extract strict facts ONLY for the job matching "{job_topic}". IGNORE ALL OTHER JOBS on the page.',
-                    backstory="""You are an expert data extractor. Job websites have sidebars, menus, and 'Latest Posts' widgets containing unrelated jobs (like Constable, Police, etc.). 
-                    YOUR STRICT RULE: You must completely IGNORE any data that does not belong to the requested Job Title. Only extract details from the main article body.""",
-                    tools=[scrape_tool],
+                    goal=f'Extract strict facts for "{job_topic}" from the cleaned text.',
+                    backstory="You are an expert data extractor. The text provided to you has been cleaned of sidebars. Extract the exact Dates, Vacancies, and Fees.",
+                    tools=[smart_scraper], # Custom tool lagaya hai
                     llm=llm,
                     verbose=True
                 )
 
                 writer = Agent(
                     role='SarkariResult Style Formatter',
-                    goal='Fill the exact markdown template dynamically using ONLY the extracted data.',
-                    backstory="You strictly follow the Markdown design. You do not write extra paragraphs. If data is missing, you write 'जल्द उपलब्ध होगा (Update Soon)'.",
+                    goal='Fill the exact markdown template dynamically.',
+                    backstory="You strictly follow the Markdown design. Fill the data accurately. If missing, write 'जल्द उपलब्ध होगा (Update Soon)'.",
                     llm=llm,
                     verbose=True
                 )
 
-                # 👇 TASK 1 ME BHI WARNING DAAL DI 👇
                 task1 = Task(
                     description=f"""
-                    Scrape this exact URL: {target_url}
-                    
-                    CRITICAL WARNING: The page contains ads and links to OTHER jobs. 
-                    If you see data for 'Constable' or anything else, IGNORE IT. 
-                    Look ONLY for data matching: '{job_topic}'.
-                    
+                    Use the 'smart_scraper' tool on this URL: {target_url}
                     Extract Total Vacancies, Start/End Dates, Fees for all categories, Age Limit, and Eligibility SPECIFICALLY for '{job_topic}'.
                     """,
-                    expected_output="Pure factual data extracted directly from the main article, ignoring sidebars.",
+                    expected_output="Pure factual data.",
                     agent=researcher
                 )
 
                 task2 = Task(
                     description=f"""
                     You MUST strictly use the exact Markdown format provided below. Fill in the brackets [ ] dynamically with the exact data from the researcher. 
-                    If a specific piece of data is missing, write "जल्द उपलब्ध होगा (Update Soon)".
 
                     **Meta Title:** [Job Title]: [Total Vacancy] पदों पर बम्पर भर्ती
                     **Meta Description:** [Board Name] द्वारा [Job Title] के पदों पर अधिसूचना जारी। आयु, योग्यता और ऑनलाइन आवेदन की जानकारी यहाँ पढ़ें।
