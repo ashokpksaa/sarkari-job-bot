@@ -6,8 +6,8 @@ from langchain_openai import ChatOpenAI
 
 # 1. Page Config
 st.set_page_config(page_title="Sarkari Job Pro Auto-Blogger", page_icon="🔥", layout="wide")
-st.title("🔥 100% Accurate Sarkari Blogger (Smart Text Mode) 🚀")
-st.markdown("वेबसाइट से असली जानकारी कॉपी करें और यहाँ पेस्ट करें। AI उसे समझकर परफेक्ट डिज़ाइन करेगा!")
+st.title("🔥 Mega Sarkari Blogger (No Data Loss Mode) 🚀")
+st.markdown("वेबसाइट से असली जानकारी कॉपी करें। AI बिना कुछ काटे उसे पूरी डिटेल के साथ छापेगा!")
 
 # 2. Configuration
 with st.sidebar:
@@ -27,44 +27,47 @@ st.subheader("🎯 Step 1: Job Details")
 job_topic = st.text_input("Enter Job Title (e.g., RRB Group D Recruitment 2026):", value="RRB Group D Recruitment 2026")
 
 st.subheader("📝 Step 2: Paste Raw Content")
-raw_data = st.text_area("वेबसाइट का टेक्स्ट यहाँ पेस्ट करें (AI खुद समझकर टेबल सेट कर लेगा):", height=200)
+raw_data = st.text_area("वेबसाइट का पूरा टेक्स्ट (ज़ोन-वाइज़, फिजिकल टेस्ट, फीस सब कुछ) यहाँ पेस्ट करें:", height=250)
 
 # --- MAIN LOGIC ---
-if st.button("🚀 Generate Smart SEO Blog"):
+if st.button("🚀 Generate Full Detail SEO Blog"):
     if not api_key:
         st.error("❌ Please enter API Key!")
     elif not raw_data.strip():
         st.error("❌ Kripya Step 2 mein text paste karein!")
     else:
-        with st.spinner('🤖 AI is applying Common Sense and formatting your blog...'):
+        with st.spinner('🤖 AI is reading your text and generating FULL DETAILS without cutting anything...'):
             try:
                 llm = ChatOpenAI(
                     model_name=current_model,
-                    temperature=0.2, # Thodi si common sense allow ki hai
+                    temperature=0.1, # Keep it strictly focused on the raw data
                     api_key=api_key,
                     base_url="https://api.groq.com/openai/v1"
                 )
 
                 writer = Agent(
                     role='Senior Sarkari Blogger',
-                    goal='Format the raw text beautifully using common sense.',
-                    backstory="""You are a smart blogger. When users paste raw text, tables often break. 
-                    YOUR RULES:
-                    1. Use common sense. If a general eligibility (like 10th Pass/ITI) is mentioned, apply it to all related posts. 
-                    2. DO NOT create 15 rows of 'Update Soon' for posts if their individual vacancies aren't listed. Combine them into one row like 'Various Group D Posts'.
-                    3. If links say 'Click Here', use the Official Website URL instead of writing 'Update Soon'.
-                    4. If job is Railways, SSC, etc., set Job Location to 'All India' automatically.""",
+                    goal='Format the raw text into a detailed SarkariResult style blog WITHOUT losing any data.',
+                    backstory="""You are an expert data formatter. Your biggest rule is: DO NOT SUMMARIZE OR DELETE DATA. 
+                    If the user provides Zone-wise vacancies, Physical test details, Refund amounts, or Salary, you MUST create separate markdown tables/sections for them. You capture everything beautifully.""",
                     llm=llm,
                     verbose=True
                 )
 
                 task1 = Task(
                     description=f"""
-                    Here is the RAW TEXT for '{job_topic}':
+                    Here is the RAW TEXT provided by the user for '{job_topic}':
                     
                     {raw_data}
                     
-                    Fill the exact Markdown format below. Use your intelligence to fix broken tables from the raw text. 
+                    CRITICAL INSTRUCTIONS: 
+                    1. DO NOT shortcut the tables. If there are 15 posts, list all 15. If there is a Zone-wise vacancy table, create a complete Zone-wise table.
+                    2. If Physical Eligibility (Running/Weight) is mentioned, create a separate section for it.
+                    3. Include Fee Refund details if present.
+                    4. Include Salary details if present.
+                    5. Include FAQs if present.
+
+                    Use this dynamic Markdown template (add extra sections like Zone-Wise Vacancy or Physical Test if they exist in the raw text):
 
                     **Meta Title:** [Job Title]: [Total Vacancy] पदों पर बम्पर भर्ती
                     **Meta Description:** [Board Name] द्वारा [Job Title] के पदों पर अधिसूचना जारी। आयु, योग्यता और ऑनलाइन आवेदन की जानकारी यहाँ पढ़ें।
@@ -83,8 +86,8 @@ if st.button("🚀 Generate Smart SEO Blog"):
                     |---|---|
                     | **पद का नाम (Post Name)** | [Job Title] |
                     | **कुल पद (Total Vacancy)** | [Total Vacancy] पद |
-                    | **नौकरी का स्थान (Job Location)**| [Infer location, e.g., All India or Specific State] |
-                    | **आधिकारिक वेबसाइट** | [Extract or infer Official Website URL] |
+                    | **नौकरी का स्थान (Job Location)**| [Infer location, e.g., All India] |
+                    | **वेतन (Salary)** | [Add Salary if available in text] |
 
                     ---
 
@@ -97,10 +100,10 @@ if st.button("🚀 Generate Smart SEO Blog"):
 
                     ---
 
-                    ## 💳 आवेदन शुल्क (Application Fee)
+                    ## 💳 आवेदन शुल्क और रिफंड (Application Fee & Refund)
                     * **General / OBC / EWS:** ₹ [Amount]
                     * **SC / ST / Divyang / Female:** ₹ [Amount]
-                    * *नोट:* परीक्षा शुल्क का भुगतान ऑनलाइन माध्यम से करें।
+                    * **फीस रिफंड (Refund on appearing in CBT):** [Mention refund details exactly as given in text, e.g., Gen/OBC: Rs 400, SC/ST: Rs 250]
 
                     ---
 
@@ -111,11 +114,24 @@ if st.button("🚀 Generate Smart SEO Blog"):
 
                     ---
 
-                    ## 🏢 रिक्ति विवरण और शैक्षणिक योग्यता (Vacancy Details & Eligibility)
+                    ## 🏢 रिक्ति विवरण और शैक्षणिक योग्यता (Vacancy & Eligibility Details)
 
-                    | पद का नाम (Post Name) | कुल पद | शैक्षणिक योग्यता (Eligibility Details) |
-                    |---|---|---|
-                    | [Smartly combine post names if needed, e.g., 'Various Group D Posts'] | [Total Vacancy] | [Apply the general eligibility found in text (e.g., 10th Pass/ITI)] |
+                    | विभाग / पद का नाम (Department / Post Name) | शैक्षणिक योग्यता (Eligibility Details) |
+                    |---|---|
+                    | [List EVERY SINGLE POST AND DEPARTMENT found in the text accurately] | [Match the exact eligibility] |
+
+                    ---
+
+                    ## 🏃‍♂️ शारीरिक योग्यता (Physical Eligibility) - [Remove this section ONLY if not in raw text]
+                    * **Male Candidates:** [List details like weight lifting, running time exactly as in text]
+                    * **Female Candidates:** [List details exactly as in text]
+
+                    ---
+
+                    ## 🌍 ज़ोन-वाइज़ रिक्ति विवरण (Zone-Wise Vacancy Details) - [Remove this section ONLY if not in raw text]
+                    | Railway Zone | UR | SC | ST | OBC | EWS | Total |
+                    |---|---|---|---|---|---|---|
+                    | [List EVERY zone exactly as provided in the raw text with exact numbers] | ... | ... | ... | ... | ... | ... |
 
                     ---
 
@@ -139,14 +155,14 @@ if st.button("🚀 Generate Smart SEO Blog"):
                     * **आधिकारिक वेबसाइट (Official Website):** [Official Website URL]
 
                     """,
-                    expected_output="A perfectly formatted SarkariResult style blog post, with intelligently formatted tables.",
+                    expected_output="A perfectly formatted, exhaustive SarkariResult style blog post containing ALL details from raw text.",
                     agent=writer
                 )
 
                 my_crew = Crew(agents=[writer], tasks=[task1])
                 result = my_crew.kickoff()
 
-                st.success("✅ Smart SEO Blog Ready!")
+                st.success("✅ Mega Detail SEO Blog Ready!")
                 st.markdown(result.raw)
             
             except Exception as e:
