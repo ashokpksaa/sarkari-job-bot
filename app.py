@@ -6,8 +6,8 @@ from langchain_openai import ChatOpenAI
 
 # 1. Page Config
 st.set_page_config(page_title="Sarkari Job Pro Auto-Blogger", page_icon="🔥", layout="wide")
-st.title("🔥 100% Accurate Sarkari Blogger (Manual Text Mode) 🚀")
-st.markdown("वेबसाइट से असली जानकारी कॉपी करें और यहाँ पेस्ट करें। AI उसे SarkariResult स्टाइल में सजा देगा!")
+st.title("🔥 100% Accurate Sarkari Blogger (Smart Text Mode) 🚀")
+st.markdown("वेबसाइट से असली जानकारी कॉपी करें और यहाँ पेस्ट करें। AI उसे समझकर परफेक्ट डिज़ाइन करेगा!")
 
 # 2. Configuration
 with st.sidebar:
@@ -27,40 +27,44 @@ st.subheader("🎯 Step 1: Job Details")
 job_topic = st.text_input("Enter Job Title (e.g., RRB Group D Recruitment 2026):", value="RRB Group D Recruitment 2026")
 
 st.subheader("📝 Step 2: Paste Raw Content")
-raw_data = st.text_area("किसी भी वेबसाइट (ResultBharat/Adda247) से सिर्फ काम का टेक्स्ट (तारीखें, फीस, पद) कॉपी करके यहाँ पेस्ट करें:", height=200)
+raw_data = st.text_area("वेबसाइट का टेक्स्ट यहाँ पेस्ट करें (AI खुद समझकर टेबल सेट कर लेगा):", height=200)
 
 # --- MAIN LOGIC ---
-if st.button("🚀 Generate SEO Blog from Text"):
+if st.button("🚀 Generate Smart SEO Blog"):
     if not api_key:
         st.error("❌ Please enter API Key!")
     elif not raw_data.strip():
         st.error("❌ Kripya Step 2 mein text paste karein!")
     else:
-        with st.spinner('🤖 AI is formatting your exact text into the template...'):
+        with st.spinner('🤖 AI is applying Common Sense and formatting your blog...'):
             try:
                 llm = ChatOpenAI(
                     model_name=current_model,
-                    temperature=0.0, # Zero creativity, strict formatting
+                    temperature=0.2, # Thodi si common sense allow ki hai
                     api_key=api_key,
                     base_url="https://api.groq.com/openai/v1"
                 )
 
                 writer = Agent(
-                    role='SarkariResult Style Formatter',
-                    goal='Fill the exact markdown template dynamically using ONLY the provided raw text.',
-                    backstory="You strictly follow the Markdown design. You ONLY use the text provided by the user. If data is missing in the text, write 'जल्द उपलब्ध होगा (Update Soon)'.",
+                    role='Senior Sarkari Blogger',
+                    goal='Format the raw text beautifully using common sense.',
+                    backstory="""You are a smart blogger. When users paste raw text, tables often break. 
+                    YOUR RULES:
+                    1. Use common sense. If a general eligibility (like 10th Pass/ITI) is mentioned, apply it to all related posts. 
+                    2. DO NOT create 15 rows of 'Update Soon' for posts if their individual vacancies aren't listed. Combine them into one row like 'Various Group D Posts'.
+                    3. If links say 'Click Here', use the Official Website URL instead of writing 'Update Soon'.
+                    4. If job is Railways, SSC, etc., set Job Location to 'All India' automatically.""",
                     llm=llm,
                     verbose=True
                 )
 
                 task1 = Task(
                     description=f"""
-                    Here is the RAW TEXT provided by the user for '{job_topic}':
+                    Here is the RAW TEXT for '{job_topic}':
                     
                     {raw_data}
                     
-                    You MUST strictly use the exact Markdown format provided below. Fill in the brackets [ ] dynamically with the exact data from the RAW TEXT above. 
-                    Do not guess or invent data. If a specific detail is not in the text, write "जल्द उपलब्ध होगा (Update Soon)".
+                    Fill the exact Markdown format below. Use your intelligence to fix broken tables from the raw text. 
 
                     **Meta Title:** [Job Title]: [Total Vacancy] पदों पर बम्पर भर्ती
                     **Meta Description:** [Board Name] द्वारा [Job Title] के पदों पर अधिसूचना जारी। आयु, योग्यता और ऑनलाइन आवेदन की जानकारी यहाँ पढ़ें।
@@ -79,8 +83,8 @@ if st.button("🚀 Generate SEO Blog from Text"):
                     |---|---|
                     | **पद का नाम (Post Name)** | [Job Title] |
                     | **कुल पद (Total Vacancy)** | [Total Vacancy] पद |
-                    | **नौकरी का स्थान (Job Location)**| [Location - e.g., All India / State Name] |
-                    | **आधिकारिक वेबसाइट** | [Official Website URL] |
+                    | **नौकरी का स्थान (Job Location)**| [Infer location, e.g., All India or Specific State] |
+                    | **आधिकारिक वेबसाइट** | [Extract or infer Official Website URL] |
 
                     ---
 
@@ -111,22 +115,19 @@ if st.button("🚀 Generate SEO Blog from Text"):
 
                     | पद का नाम (Post Name) | कुल पद | शैक्षणिक योग्यता (Eligibility Details) |
                     |---|---|---|
-                    | [Post Name 1] | [Count] | [Strictly mention the exact 10th/12th/Degree requirements] |
-                    | [Post Name 2] | [Count] | [Eligibility Details] |
+                    | [Smartly combine post names if needed, e.g., 'Various Group D Posts'] | [Total Vacancy] | [Apply the general eligibility found in text (e.g., 10th Pass/ITI)] |
 
                     ---
 
                     ## 📝 चयन प्रक्रिया (Selection Process)
-                    1.  **[Step 1 - e.g., Written Exam / CBT]**
-                    2.  **[Step 2 - e.g., Physical Test (PET/PST) if applicable]**
-                    3.  **[Step 3 - e.g., Document Verification (DV)]**
+                    [List the selection steps exactly as found in the text, using bullet points]
 
                     ---
 
                     ## 💻 ऑनलाइन आवेदन कैसे करें? (How to Apply Online)
-                    1.  सबसे पहले आधिकारिक वेबसाइट **[Official Website URL]** पर जाएं।
+                    1.  सबसे पहले आधिकारिक वेबसाइट पर जाएं।
                     2.  लॉगिन करें या नया 'Registration' बनाएं।
-                    3.  'Recruitment Portal' या 'Latest Jobs' में जाकर **[Job Title]** पर क्लिक करें।
+                    3.  'Recruitment Portal' में जाकर **[Job Title]** पर क्लिक करें।
                     4.  अपना आवेदन फॉर्म भरें और दस्तावेज़ अपलोड करें।
                     5.  अपनी श्रेणी के अनुसार आवेदन शुल्क का भुगतान करें।
                     6.  फॉर्म को 'Final Submit' करें और प्रिंट आउट लें।
@@ -134,19 +135,18 @@ if st.button("🚀 Generate SEO Blog from Text"):
                     ---
 
                     ## 🔗 महत्वपूर्ण लिंक्स (Important Links)
-                    * **ऑनलाइन आवेदन करें (Apply Online):** [Direct Link]
-                    * **आधिकारिक वेबसाइट (Official Website):** [Official Link]
+                    * **ऑनलाइन आवेदन करें (Apply Online):** [Official Website URL]
+                    * **आधिकारिक वेबसाइट (Official Website):** [Official Website URL]
 
                     """,
-                    expected_output="A perfectly formatted SarkariResult style blog post filled ONLY with the provided raw text.",
+                    expected_output="A perfectly formatted SarkariResult style blog post, with intelligently formatted tables.",
                     agent=writer
                 )
 
-                # Ab sirf ek hi task aur ek hi agent hai (Fast & Accurate)
                 my_crew = Crew(agents=[writer], tasks=[task1])
                 result = my_crew.kickoff()
 
-                st.success("✅ 100% Accurate SEO Blog Ready!")
+                st.success("✅ Smart SEO Blog Ready!")
                 st.markdown(result.raw)
             
             except Exception as e:
