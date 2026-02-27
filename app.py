@@ -7,7 +7,7 @@ from crewai_tools import ScrapeWebsiteTool
 
 # 1. Page Config
 st.set_page_config(page_title="Sarkari Job Auto-Blogger Pro", page_icon="📝", layout="wide")
-st.title("🚀 1000+ Words Job Blogger (Stable Mode) 🔥")
+st.title("🚀 1000+ Words Job Blogger (100% Fixed Mode) 🔥")
 
 # 2. Configuration
 with st.sidebar:
@@ -16,13 +16,13 @@ with st.sidebar:
     if not api_key:
         api_key = st.text_input("Enter Groq API Key:", type="password")
 
-# --- MODEL FIX FOR RATE LIMIT ---
-# 3.3-70b ki limit khatam hai, isliye 3.1-70b use karenge (Dono ki limit alag hoti hai)
+# 3.1-70b model (Taaki 429 limit error na aaye)
 current_model = "llama-3.1-70b-versatile"
 
 if api_key:
     os.environ["OPENAI_API_KEY"] = api_key 
-    os.environ["OPENAI_API_BASE"] = "https://api.groq.com/openai/v1"
+    # 👇 YAHAN MERI GALTI THI JO MAINE THEEK KAR DI HAI (BASE_URL) 👇
+    os.environ["OPENAI_BASE_URL"] = "https://api.groq.com/openai/v1"
 
 # 3. Inputs
 job_topic = st.text_input("Enter Job Topic:", value="RSSB Lab Assistant Recruitment 2026")
@@ -40,10 +40,11 @@ if st.button("🚀 Generate 1000+ Words Detailed Blog"):
                 llm = ChatOpenAI(
                     model_name=current_model,
                     temperature=0.6,
-                    api_key=api_key
+                    api_key=api_key,
+                    base_url="https://api.groq.com/openai/v1" # Double safety
                 )
 
-                # Researcher: Tables aur details nikalne ke liye
+                # Researcher Agent
                 researcher = Agent(
                     role='Senior Data Researcher',
                     goal='Extract all tables, dates, and vacancy numbers accurately.',
@@ -53,7 +54,7 @@ if st.button("🚀 Generate 1000+ Words Detailed Blog"):
                     verbose=True
                 )
 
-                # Writer: 1000 words target ke liye
+                # Writer Agent
                 writer = Agent(
                     role='Pro SEO Content Writer',
                     goal='Write a massive 1000+ words Hindi blog post.',
@@ -96,7 +97,4 @@ if st.button("🚀 Generate 1000+ Words Detailed Blog"):
                 st.markdown(result.raw)
             
             except Exception as e:
-                if "429" in str(e):
-                    st.error("🚨 Groq Daily Limit Exhausted! Please use a different API Key or wait 24 hours.")
-                else:
-                    st.error(f"Error: {e}")
+                st.error(f"Error: {e}")
