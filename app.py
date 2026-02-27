@@ -4,12 +4,11 @@ import datetime
 from crewai import Agent, Task, Crew, Process
 from langchain_openai import ChatOpenAI
 from crewai_tools import ScrapeWebsiteTool
-from duckduckgo_search import DDGS
 
 # 1. Page Config
-st.set_page_config(page_title="Sarkari Job Auto-Blogger Pro", page_icon="🔥", layout="wide")
-st.title("🔥 Fully Automated Sarkari Blogger 🚀")
-st.markdown("Job Title डालें और AI को जादू करने दें! (Plan B भी उपलब्ध है)")
+st.set_page_config(page_title="Sarkari Job Pro Auto-Blogger", page_icon="🔥", layout="wide")
+st.title("🔥 100% Accurate Sarkari Blogger 🚀")
+st.markdown("गलत डेटा से बचें! सही वेबसाइट का सीधा लिंक डालें और परफेक्ट आर्टिकल पाएं।")
 
 # 2. Configuration
 with st.sidebar:
@@ -24,179 +23,146 @@ if api_key:
     os.environ["OPENAI_API_KEY"] = api_key 
     os.environ["OPENAI_BASE_URL"] = "https://api.groq.com/openai/v1"
 
-# --- SMART SEARCH FUNCTION ---
-def get_job_urls(job_title):
-    """Bina kisi complex query ke, simple aur smart search."""
-    urls = []
-    try:
-        with DDGS() as ddgs:
-            # Search 1: ResultBharat
-            res1 = [r for r in ddgs.text(f"{job_title} site:resultbharat.com", max_results=1)]
-            if res1: urls.append(res1[0]['href'])
-            
-            # Search 2: FreeJobAlert
-            res2 = [r for r in ddgs.text(f"{job_title} site:freejobalert.com", max_results=1)]
-            if res2: urls.append(res2[0]['href'])
-    except Exception as e:
-        print(f"Search Error: {e}")
-    return urls
-
 scrape_tool = ScrapeWebsiteTool()
 
 # --- INPUT SECTION ---
 st.subheader("🎯 Step 1: Job Details")
-job_topic = st.text_input("Enter Job Title (e.g., SSC CHSL Recruitment 2026):", value="SSC CHSL Recruitment 2026")
+job_topic = st.text_input("Enter Job Title (e.g., Railway ALP Recruitment 2026):", value="Railway ALP Recruitment 2026")
 
-st.subheader("🔗 Step 2: Plan B (Optional)")
-manual_url = st.text_input("Agar Auto-Search fail ho jaye, to yahan direct link paste karein (Varna ise khali chhod dein):", placeholder="https://www.resultbharat.com/...")
+st.subheader("🔗 Step 2: Paste Direct Link")
+target_url = st.text_input("ResultBharat, FreeJobAlert या Adda247 का सीधा लिंक यहाँ पेस्ट करें:", placeholder="https://www.resultbharat.com/...")
 
 # --- MAIN LOGIC ---
-if st.button("🚀 Auto-Search & Generate SEO Blog"):
+if st.button("🚀 Generate 100% Accurate Blog"):
     if not api_key:
         st.error("❌ Please enter API Key!")
+    elif not target_url.strip():
+        st.error("❌ Kripya Step 2 mein website ka link zaroor dalein!")
     else:
-        found_urls = []
-        
-        # Decide karna ki auto-search karna hai ya manual link use karna hai
-        if manual_url.strip():
-            found_urls = [manual_url.strip()]
-            st.success("✅ Using your provided Manual Link!")
-        else:
-            with st.spinner('🔍 Searching for the exact job links on ResultBharat & FreeJobAlert...'):
-                found_urls = get_job_urls(job_topic)
-        
-        if not found_urls:
-            st.error("❌ Auto-Search failed! Kripya naam theek se likhein ya 'Plan B' wale box mein direct link daal dein.")
-        else:
-            if not manual_url.strip():
-                st.success(f"✅ Direct Links Found by AI: {', '.join(found_urls)}")
+        with st.spinner('🤖 AI is reading your exact link and filling the SarkariResult template...'):
+            try:
+                llm = ChatOpenAI(
+                    model_name=current_model,
+                    temperature=0.3, # Strict facts only
+                    api_key=api_key,
+                    base_url="https://api.groq.com/openai/v1"
+                )
+
+                researcher = Agent(
+                    role='Data Extractor',
+                    goal='Extract strict facts (Dates, Vacancies, Fees) ONLY from the provided URL.',
+                    backstory="You extract pure facts from the specific job URL. You never guess or invent data.",
+                    tools=[scrape_tool],
+                    llm=llm,
+                    verbose=True
+                )
+
+                writer = Agent(
+                    role='SarkariResult Style Formatter',
+                    goal='Fill the exact markdown template dynamically using ONLY the extracted data.',
+                    backstory="You strictly follow the Markdown design. You do not write extra paragraphs.",
+                    llm=llm,
+                    verbose=True
+                )
+
+                task1 = Task(
+                    description=f"""
+                    Scrape this exact URL ONLY: {target_url}
+                    Extract Total Vacancies, Start/End Dates, Fees for all categories, Age Limit, and Eligibility for '{job_topic}'.
+                    """,
+                    expected_output="Pure factual data extracted directly from the provided website.",
+                    agent=researcher
+                )
+
+                task2 = Task(
+                    description=f"""
+                    You MUST strictly use the exact Markdown format provided below. Fill in the brackets [ ] dynamically with the exact data from the researcher. 
+                    If a specific piece of data is missing from the scraped content, write "जल्द उपलब्ध होगा (Update Soon)".
+
+                    **Meta Title:** [Job Title]: [Total Vacancy] पदों पर बम्पर भर्ती
+                    **Meta Description:** [Board Name] द्वारा [Job Title] के पदों पर अधिसूचना जारी। आयु, योग्यता और ऑनलाइन आवेदन की जानकारी यहाँ पढ़ें।
+                    **Tags:** Sarkari Result, [Board Name], Govt Jobs 2026
+
+                    ---
+
+                    # 🚨 [Job Title]: [Total Vacancy] पदों पर बम्पर भर्ती, ऑनलाइन आवेदन शुरू
+                    
+                    > **📌 संक्षिप्त जानकारी (Short Info):** [Board Name] ने [Job Title] के **[Total Vacancy]** पदों पर सीधी भर्ती के लिए आधिकारिक अधिसूचना जारी कर दी है। जो भी उम्मीदवार इस भर्ती में रुचि रखते हैं और पात्रता पूरी करते हैं, वे **[Start Date]** से **[End Date]** तक ऑनलाइन आवेदन कर सकते हैं। 
+
+                    ---
+
+                    ## 📊 भर्ती का अवलोकन (Recruitment Overview)
+                    | संगठन का नाम (Board) | [Board Name] |
+                    |---|---|
+                    | **पद का नाम (Post Name)** | [Job Title] |
+                    | **कुल पद (Total Vacancy)** | [Total Vacancy] पद |
+                    | **नौकरी का स्थान (Job Location)**| [Location - e.g., All India / State Name] |
+                    | **आधिकारिक वेबसाइट** | [Official Website URL] |
+
+                    ---
+
+                    ## 🗓️ महत्वपूर्ण तिथियां (Important Dates)
+                    * **अधिसूचना जारी होने की तिथि:** [Notification Date]
+                    * **ऑनलाइन आवेदन शुरू (Apply Start):** 🟢 [Start Date]
+                    * **आवेदन की अंतिम तिथि (Last Date):** 🔴 **[End Date]**
+                    * **परीक्षा शुल्क भुगतान अंतिम तिथि:** [Fee Last Date]
+                    * **परीक्षा तिथि (Exam Date):** 📅 [Exam Date]
+
+                    ---
+
+                    ## 💳 आवेदन शुल्क (Application Fee)
+                    * **General / OBC / EWS:** ₹ [Amount]
+                    * **SC / ST / Divyang / Female:** ₹ [Amount]
+                    * *नोट:* परीक्षा शुल्क का भुगतान ऑनलाइन माध्यम से करें।
+
+                    ---
+
+                    ## 🎓 आयु सीमा (Age Limit) 
+                    * **न्यूनतम आयु (Minimum Age):** [Age] वर्ष
+                    * **अधिकतम आयु (Maximum Age):** [Age] वर्ष
+                    * *आयु में छूट:* सरकारी नियमानुसार लागू।
+
+                    ---
+
+                    ## 🏢 रिक्ति विवरण और शैक्षणिक योग्यता (Vacancy Details & Eligibility)
+
+                    | पद का नाम (Post Name) | कुल पद | शैक्षणिक योग्यता (Eligibility Details) |
+                    |---|---|---|
+                    | [Post Name 1] | [Count] | [Strictly mention the exact 10th/12th/Degree requirements] |
+                    | [Post Name 2] | [Count] | [Eligibility Details] |
+
+                    ---
+
+                    ## 📝 चयन प्रक्रिया (Selection Process)
+                    1.  **[Step 1 - e.g., Written Exam / CBT]**
+                    2.  **[Step 2 - e.g., Document Verification (DV)]**
+
+                    ---
+
+                    ## 💻 ऑनलाइन आवेदन कैसे करें? (How to Apply Online)
+                    1.  सबसे पहले आधिकारिक वेबसाइट **[Official Website URL]** पर जाएं।
+                    2.  लॉगिन करें या नया 'Registration' बनाएं।
+                    3.  'Recruitment Portal' या 'Latest Jobs' में जाकर **[Job Title]** पर क्लिक करें।
+                    4.  अपना आवेदन फॉर्म भरें और दस्तावेज़ अपलोड करें।
+                    5.  अपनी श्रेणी के अनुसार आवेदन शुल्क का भुगतान करें।
+                    6.  फॉर्म को 'Final Submit' करें और प्रिंट आउट लें।
+
+                    ---
+
+                    ## 🔗 महत्वपूर्ण लिंक्स (Important Links)
+                    * **ऑनलाइन आवेदन करें (Apply Online):** [Direct Link]
+                    * **आधिकारिक वेबसाइट (Official Website):** [Official Link]
+
+                    """,
+                    expected_output="A perfectly formatted SarkariResult style blog post filled dynamically.",
+                    agent=writer
+                )
+
+                my_crew = Crew(agents=[researcher, writer], tasks=[task1, task2])
+                result = my_crew.kickoff()
+
+                st.success("✅ 100% Accurate SEO Blog Ready!")
+                st.markdown(result.raw)
             
-            # STEP 3: AI starts writing
-            with st.spinner('🤖 AI is reading the data and filling your SarkariResult template...'):
-                try:
-                    llm = ChatOpenAI(
-                        model_name=current_model,
-                        temperature=0.3,
-                        api_key=api_key,
-                        base_url="https://api.groq.com/openai/v1"
-                    )
-
-                    researcher = Agent(
-                        role='Data Extractor',
-                        goal='Extract strict facts (Dates, Vacancies, Fees) from the given URLs.',
-                        backstory="You extract pure facts from job websites. Do not guess any data.",
-                        tools=[scrape_tool],
-                        llm=llm,
-                        verbose=True
-                    )
-
-                    writer = Agent(
-                        role='SarkariResult Style Formatter',
-                        goal='Fill the exact markdown template dynamically.',
-                        backstory="You strictly follow the Markdown design. Fill the data accurately.",
-                        llm=llm,
-                        verbose=True
-                    )
-
-                    target_urls_str = ", ".join(found_urls)
-                    task1 = Task(
-                        description=f"""
-                        Scrape these specific URLs: {target_urls_str}
-                        Extract Total Vacancies, Start/End Dates, Fees for all categories, Age Limit, and Eligibility for '{job_topic}'.
-                        """,
-                        expected_output="Pure factual data extracted from the specific websites.",
-                        agent=researcher
-                    )
-
-                    task2 = Task(
-                        description=f"""
-                        You MUST strictly use the exact Markdown format provided below. Fill in the brackets [ ] dynamically with the exact data from the researcher. 
-                        If missing, write "जल्द उपलब्ध होगा (Update Soon)".
-
-                        **Meta Title:** [Job Title]: [Total Vacancy] पदों पर बम्पर भर्ती
-                        **Meta Description:** [Board Name] द्वारा [Job Title] के पदों पर अधिसूचना जारी। आयु, योग्यता और ऑनलाइन आवेदन की जानकारी यहाँ पढ़ें।
-                        **Tags:** Sarkari Result, [Board Name], Govt Jobs 2026
-
-                        ---
-
-                        # 🚨 [Job Title]: [Total Vacancy] पदों पर बम्पर भर्ती, ऑनलाइन आवेदन शुरू
-                        
-                        > **📌 संक्षिप्त जानकारी (Short Info):** [Board Name] ने [Job Title] के **[Total Vacancy]** पदों पर सीधी भर्ती के लिए आधिकारिक अधिसूचना जारी कर दी है। जो भी उम्मीदवार इस भर्ती में रुचि रखते हैं और पात्रता पूरी करते हैं, वे **[Start Date]** से **[End Date]** तक ऑनलाइन आवेदन कर सकते हैं। 
-
-                        ---
-
-                        ## 📊 भर्ती का अवलोकन (Recruitment Overview)
-                        | संगठन का नाम (Board) | [Board Name] |
-                        |---|---|
-                        | **पद का नाम (Post Name)** | [Job Title] |
-                        | **कुल पद (Total Vacancy)** | [Total Vacancy] पद |
-                        | **नौकरी का स्थान (Job Location)**| [Location - e.g., All India / State Name] |
-                        | **आधिकारिक वेबसाइट** | [Official Website URL] |
-
-                        ---
-
-                        ## 🗓️ महत्वपूर्ण तिथियां (Important Dates)
-                        * **अधिसूचना जारी होने की तिथि:** [Notification Date]
-                        * **ऑनलाइन आवेदन शुरू (Apply Start):** 🟢 [Start Date]
-                        * **आवेदन की अंतिम तिथि (Last Date):** 🔴 **[End Date]**
-                        * **परीक्षा शुल्क भुगतान अंतिम तिथि:** [Fee Last Date]
-                        * **परीक्षा तिथि (Exam Date):** 📅 [Exam Date]
-
-                        ---
-
-                        ## 💳 आवेदन शुल्क (Application Fee)
-                        * **General / OBC / EWS:** ₹ [Amount]
-                        * **SC / ST / Divyang / Female:** ₹ [Amount]
-                        * *नोट:* परीक्षा शुल्क का भुगतान ऑनलाइन माध्यम से करें।
-
-                        ---
-
-                        ## 🎓 आयु सीमा (Age Limit) 
-                        * **न्यूनतम आयु (Minimum Age):** [Age] वर्ष
-                        * **अधिकतम आयु (Maximum Age):** [Age] वर्ष
-                        * *आयु में छूट:* सरकारी नियमानुसार लागू।
-
-                        ---
-
-                        ## 🏢 रिक्ति विवरण और शैक्षणिक योग्यता (Vacancy Details & Eligibility)
-
-                        | पद का नाम (Post Name) | कुल पद | शैक्षणिक योग्यता (Eligibility Details) |
-                        |---|---|---|
-                        | [Post Name 1] | [Count] | [Strictly mention the exact 10th/12th/Degree requirements] |
-                        | [Post Name 2] | [Count] | [Eligibility Details] |
-
-                        ---
-
-                        ## 📝 चयन प्रक्रिया (Selection Process)
-                        1.  **[Step 1 - e.g., Written Exam / CBT]**
-                        2.  **[Step 2 - e.g., Document Verification (DV)]**
-
-                        ---
-
-                        ## 💻 ऑनलाइन आवेदन कैसे करें? (How to Apply Online)
-                        1.  सबसे पहले आधिकारिक वेबसाइट **[Official Website URL]** पर जाएं।
-                        2.  लॉगिन करें या नया 'Registration' बनाएं।
-                        3.  'Recruitment Portal' या 'Latest Jobs' में जाकर **[Job Title]** पर क्लिक करें।
-                        4.  अपना आवेदन फॉर्म भरें और दस्तावेज़ अपलोड करें।
-                        5.  अपनी श्रेणी के अनुसार आवेदन शुल्क का भुगतान करें।
-                        6.  फॉर्म को 'Final Submit' करें और प्रिंट आउट लें।
-
-                        ---
-
-                        ## 🔗 महत्वपूर्ण लिंक्स (Important Links)
-                        * **ऑनलाइन आवेदन करें (Apply Online):** [Direct Link]
-                        * **आधिकारिक वेबसाइट (Official Website):** [Official Link]
-
-                        """,
-                        expected_output="A perfectly formatted SarkariResult style blog post filled dynamically.",
-                        agent=writer
-                    )
-
-                    my_crew = Crew(agents=[researcher, writer], tasks=[task1, task2])
-                    result = my_crew.kickoff()
-
-                    st.success("✅ Fully Automated SEO Blog Ready!")
-                    st.markdown(result.raw)
-                
-                except Exception as e:
-                    st.error(f"Error: {e}")
+            except Exception as e:
+                st.error(f"Error: {e}")
