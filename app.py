@@ -9,7 +9,7 @@ from duckduckgo_search import DDGS
 # 1. Page Config
 st.set_page_config(page_title="Sarkari Job Auto-Blogger Pro", page_icon="🔥", layout="wide")
 st.title("🔥 Fully Automated Sarkari Blogger 🚀")
-st.markdown("बस Job Title डालें। सिस्टम खुद लिंक ढूंढेगा और ब्लॉग छापेगा!")
+st.markdown("Job Title डालें और AI को जादू करने दें! (Plan B भी उपलब्ध है)")
 
 # 2. Configuration
 with st.sidebar:
@@ -24,40 +24,54 @@ if api_key:
     os.environ["OPENAI_API_KEY"] = api_key 
     os.environ["OPENAI_BASE_URL"] = "https://api.groq.com/openai/v1"
 
-# --- SMART SEARCH FUNCTION (Python Base, No AI Lazy-ness) ---
+# --- SMART SEARCH FUNCTION ---
 def get_job_urls(job_title):
-    """Sikha-sikhaya Python code jo sirf un 3 websites se exact URL nikalega."""
+    """Bina kisi complex query ke, simple aur smart search."""
+    urls = []
     try:
         with DDGS() as ddgs:
-            # ResultBharat, FreeJobAlert aur Adda247 par search
-            search_query = f"{job_title} site:resultbharat.com OR site:freejobalert.com OR site:adda247.com/jobs"
-            results = [r for r in ddgs.text(search_query, max_results=2)]
-            # Sirf links (URLs) bahar nikalna
-            urls = [res['href'] for res in results if 'href' in res]
-            return urls
+            # Search 1: ResultBharat
+            res1 = [r for r in ddgs.text(f"{job_title} site:resultbharat.com", max_results=1)]
+            if res1: urls.append(res1[0]['href'])
+            
+            # Search 2: FreeJobAlert
+            res2 = [r for r in ddgs.text(f"{job_title} site:freejobalert.com", max_results=1)]
+            if res2: urls.append(res2[0]['href'])
     except Exception as e:
-        return []
+        print(f"Search Error: {e}")
+    return urls
 
 scrape_tool = ScrapeWebsiteTool()
 
-# --- INPUT ---
-job_topic = st.text_input("🎯 Enter Job Title (e.g., SSC CHSL 2026, Rajasthan CET):", value="SSC CHSL Recruitment 2026")
+# --- INPUT SECTION ---
+st.subheader("🎯 Step 1: Job Details")
+job_topic = st.text_input("Enter Job Title (e.g., SSC CHSL Recruitment 2026):", value="SSC CHSL Recruitment 2026")
+
+st.subheader("🔗 Step 2: Plan B (Optional)")
+manual_url = st.text_input("Agar Auto-Search fail ho jaye, to yahan direct link paste karein (Varna ise khali chhod dein):", placeholder="https://www.resultbharat.com/...")
 
 # --- MAIN LOGIC ---
 if st.button("🚀 Auto-Search & Generate SEO Blog"):
     if not api_key:
         st.error("❌ Please enter API Key!")
     else:
-        # STEP 1: Pehle Python khud link dhoondhega
-        with st.spinner('🔍 Searching for the exact job links on ResultBharat & FreeJobAlert...'):
-            found_urls = get_job_urls(job_topic)
-            
-        if not found_urls:
-            st.error("❌ In 3 websites par is job ka koi link nahi mila. Kripya naam thoda theek se likhein.")
+        found_urls = []
+        
+        # Decide karna ki auto-search karna hai ya manual link use karna hai
+        if manual_url.strip():
+            found_urls = [manual_url.strip()]
+            st.success("✅ Using your provided Manual Link!")
         else:
-            st.success(f"✅ Direct Links Found: {', '.join(found_urls)}")
+            with st.spinner('🔍 Searching for the exact job links on ResultBharat & FreeJobAlert...'):
+                found_urls = get_job_urls(job_topic)
+        
+        if not found_urls:
+            st.error("❌ Auto-Search failed! Kripya naam theek se likhein ya 'Plan B' wale box mein direct link daal dein.")
+        else:
+            if not manual_url.strip():
+                st.success(f"✅ Direct Links Found by AI: {', '.join(found_urls)}")
             
-            # STEP 2: Ab AI sirf un links ko padhega (No confusion)
+            # STEP 3: AI starts writing
             with st.spinner('🤖 AI is reading the data and filling your SarkariResult template...'):
                 try:
                     llm = ChatOpenAI(
@@ -84,7 +98,6 @@ if st.button("🚀 Auto-Search & Generate SEO Blog"):
                         verbose=True
                     )
 
-                    # Task 1 me hum direct wo URL de rahe hain jo Python ne dhoondha hai
                     target_urls_str = ", ".join(found_urls)
                     task1 = Task(
                         description=f"""
