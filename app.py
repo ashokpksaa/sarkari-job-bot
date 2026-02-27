@@ -1,15 +1,13 @@
 import streamlit as st
 import os
-import requests
-from bs4 import BeautifulSoup
+import datetime
 from crewai import Agent, Task, Crew, Process
 from langchain_openai import ChatOpenAI
-from crewai.tools import tool
 
 # 1. Page Config
 st.set_page_config(page_title="Sarkari Job Pro Auto-Blogger", page_icon="🔥", layout="wide")
-st.title("🔥 100% Accurate Sarkari Blogger (No-Limit Mode) 🚀")
-st.markdown("अब कोई डेटा नहीं छूटेगा! यह टूल पूरा पेज स्कैन करेगा।")
+st.title("🔥 100% Accurate Sarkari Blogger (Manual Text Mode) 🚀")
+st.markdown("वेबसाइट से असली जानकारी कॉपी करें और यहाँ पेस्ट करें। AI उसे SarkariResult स्टाइल में सजा देगा!")
 
 # 2. Configuration
 with st.sidebar:
@@ -24,82 +22,45 @@ if api_key:
     os.environ["OPENAI_API_KEY"] = api_key 
     os.environ["OPENAI_BASE_URL"] = "https://api.groq.com/openai/v1"
 
-# --- DEEP SURGEON SCRAPER TOOL ---
-@tool
-def deep_scraper(url: str):
-    """Scrapes the website deeply, removes sidebars, and returns up to 25000 characters."""
-    try:
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        }
-        response = requests.get(url, headers=headers, timeout=15)
-        soup = BeautifulSoup(response.content, 'html.parser')
-
-        # कचरा साफ करना (Sidebars, Menus, Footer, Ads)
-        for junk in soup(['aside', 'nav', 'footer', 'header', 'script', 'style', 'noscript']):
-            junk.decompose()
-
-        # क्लीन टेक्स्ट निकालना
-        text = soup.get_text(separator='\n', strip=True)
-        
-        # लिमिट बढ़ाकर 25,000 कर दी है ताकि नीचे छिपी हुई टेबल्स भी AI पढ़ सके
-        return text[:25000] 
-    except Exception as e:
-        return f"Error scraping: {e}"
-
 # --- INPUT SECTION ---
 st.subheader("🎯 Step 1: Job Details")
 job_topic = st.text_input("Enter Job Title (e.g., RRB Group D Recruitment 2026):", value="RRB Group D Recruitment 2026")
 
-st.subheader("🔗 Step 2: Paste Direct Link")
-target_url = st.text_input("Job Website का सीधा लिंक यहाँ पेस्ट करें:", placeholder="https://jobapply24.in/...")
+st.subheader("📝 Step 2: Paste Raw Content")
+raw_data = st.text_area("किसी भी वेबसाइट (ResultBharat/Adda247) से सिर्फ काम का टेक्स्ट (तारीखें, फीस, पद) कॉपी करके यहाँ पेस्ट करें:", height=200)
 
 # --- MAIN LOGIC ---
-if st.button("🚀 Generate 100% Accurate Blog"):
+if st.button("🚀 Generate SEO Blog from Text"):
     if not api_key:
         st.error("❌ Please enter API Key!")
-    elif not target_url.strip():
-        st.error("❌ Kripya Step 2 mein website ka link zaroor dalein!")
+    elif not raw_data.strip():
+        st.error("❌ Kripya Step 2 mein text paste karein!")
     else:
-        with st.spinner('✂️ Scanning the ENTIRE webpage deeply for your job details...'):
+        with st.spinner('🤖 AI is formatting your exact text into the template...'):
             try:
                 llm = ChatOpenAI(
                     model_name=current_model,
-                    temperature=0.1, 
+                    temperature=0.0, # Zero creativity, strict formatting
                     api_key=api_key,
                     base_url="https://api.groq.com/openai/v1"
                 )
 
-                researcher = Agent(
-                    role='Deep Data Extractor',
-                    goal=f'Extract all facts related ONLY to "{job_topic}".',
-                    backstory="You are a meticulous data parser. The text contains the full webpage. Ignore unrelated job links (like Constable) and find the exact dates, fees, and vacancies for the requested job.",
-                    tools=[deep_scraper], 
-                    llm=llm,
-                    verbose=True
-                )
-
                 writer = Agent(
                     role='SarkariResult Style Formatter',
-                    goal='Fill the markdown template with extracted data.',
-                    backstory="You strictly follow the Markdown design. You do not leave blanks. If data is genuinely missing from the text, write 'जल्द उपलब्ध होगा (Update Soon)'.",
+                    goal='Fill the exact markdown template dynamically using ONLY the provided raw text.',
+                    backstory="You strictly follow the Markdown design. You ONLY use the text provided by the user. If data is missing in the text, write 'जल्द उपलब्ध होगा (Update Soon)'.",
                     llm=llm,
                     verbose=True
                 )
 
                 task1 = Task(
                     description=f"""
-                    Use the 'deep_scraper' tool on this URL: {target_url}
-                    Focus ONLY on details related to '{job_topic}'. Ignore 'Latest Jobs' widgets.
-                    Extract Total Vacancies, Start/End Dates, Fees for all categories, Age Limit, and Eligibility.
-                    """,
-                    expected_output="Pure factual data for the specific job.",
-                    agent=researcher
-                )
-
-                task2 = Task(
-                    description=f"""
-                    You MUST strictly use the exact Markdown format provided below. Fill in the brackets [ ] dynamically with the exact data from the researcher. 
+                    Here is the RAW TEXT provided by the user for '{job_topic}':
+                    
+                    {raw_data}
+                    
+                    You MUST strictly use the exact Markdown format provided below. Fill in the brackets [ ] dynamically with the exact data from the RAW TEXT above. 
+                    Do not guess or invent data. If a specific detail is not in the text, write "जल्द उपलब्ध होगा (Update Soon)".
 
                     **Meta Title:** [Job Title]: [Total Vacancy] पदों पर बम्पर भर्ती
                     **Meta Description:** [Board Name] द्वारा [Job Title] के पदों पर अधिसूचना जारी। आयु, योग्यता और ऑनलाइन आवेदन की जानकारी यहाँ पढ़ें।
@@ -177,11 +138,12 @@ if st.button("🚀 Generate 100% Accurate Blog"):
                     * **आधिकारिक वेबसाइट (Official Website):** [Official Link]
 
                     """,
-                    expected_output="A perfectly formatted SarkariResult style blog post filled dynamically.",
+                    expected_output="A perfectly formatted SarkariResult style blog post filled ONLY with the provided raw text.",
                     agent=writer
                 )
 
-                my_crew = Crew(agents=[researcher, writer], tasks=[task1, task2])
+                # Ab sirf ek hi task aur ek hi agent hai (Fast & Accurate)
+                my_crew = Crew(agents=[writer], tasks=[task1])
                 result = my_crew.kickoff()
 
                 st.success("✅ 100% Accurate SEO Blog Ready!")
